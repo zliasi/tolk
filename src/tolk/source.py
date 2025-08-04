@@ -105,6 +105,31 @@ class Source:
         self._check_open()
         return _engine.rfind(self._data, needle, start, end)
 
+    def findall(
+        self,
+        needle: bytes,
+        start: int = 0,
+        end: int | None = None,
+        *,
+        reverse: bool = False,
+    ) -> list[int]:
+        """Offsets of every non-overlapping occurrence."""
+        self._check_open()
+        walk = _engine.iter_rfind if reverse else _engine.iter_find
+        return list(walk(self._data, needle, start, end))
+
+    def find_nth(
+        self, needle: bytes, n: int, start: int = 0, end: int | None = None
+    ) -> int:
+        """Offset of the nth occurrence, negative n counting from the end."""
+        self._check_open()
+        return _engine.find_nth(self._data, needle, n, start, end)
+
+    def count(self, needle: bytes, start: int = 0, end: int | None = None) -> int:
+        """How many non-overlapping occurrences of needle there are."""
+        self._check_open()
+        return _engine.count(self._data, needle, start, end)
+
     def close(self) -> None:
         if self._closed:
             return
