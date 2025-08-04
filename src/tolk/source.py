@@ -11,6 +11,8 @@ import mmap
 import os
 from types import TracebackType
 
+from . import _engine
+
 # Under this size a mapping costs more than the copy it saves. Setting up a
 # mapping is a syscall plus page table work, while a small read lands in
 # cache and is done with.
@@ -41,7 +43,7 @@ class Source:
     Source. Use read() instead when the bytes need to escape.
     """
 
-    __slots__ = ("path", "size", "_fd", "_map", "_view", "_closed")
+    __slots__ = ("path", "size", "_fd", "_map", "_data", "_view", "_closed")
 
     def __init__(
         self, path: str | os.PathLike[str], *, small_file_limit: int = SMALL_FILE_LIMIT
@@ -54,12 +56,13 @@ class Source:
             self.size = os.fstat(self._fd).st_size
             if self.size == 0:
                 # An empty file cannot be mapped, and there is nothing to read.
-                self._view = memoryview(b"")
+                self._data = b""
             elif self.size <= small_file_limit:
-                self._view = memoryview(_read_exactly(self._fd, self.size))
+                self._data = _read_exactly(self._fd, self.size)
             else:
                 self._map = mmap.mmap(self._fd, 0, access=mmap.ACCESS_READ)
-                self._view = memoryview(self._map)
+                self._data = self._map
+            self._view = memoryview(self._data)
         except BaseException:
             os.close(self._fd)
             raise
@@ -72,6 +75,7 @@ class Source:
         obj.size = len(data)
         obj._fd = -1
         obj._map = None
+        obj._data = data
         obj._view = memoryview(data)
         obj._closed = False
         return obj
@@ -90,6 +94,16 @@ class Source:
     def read(self, start: int = 0, end: int | None = None) -> bytes:
         """Copy bytes in [start, end), safe to keep after close()."""
         return bytes(self.slice(start, end))
+
+    def find(self, needle: bytes, start: int = 0, end: int | None = None) -> int:
+        """Offset of the first occurrence of needle, or -1."""
+        self._check_open()
+        return _engine.find(self._data, needle, start, end)
+
+    def rfind(self, needle: bytes, start: int = 0, end: int | None = None) -> int:
+        """Offset of the last occurrence of needle, or -1."""
+        self._check_open()
+        return _engine.rfind(self._data, needle, start, end)
 
     def close(self) -> None:
         if self._closed:
