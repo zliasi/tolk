@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import mmap
 import os
+from collections.abc import Iterator
 from types import TracebackType
 
 from . import _engine
@@ -129,6 +130,32 @@ class Source:
         """How many non-overlapping occurrences of needle there are."""
         self._check_open()
         return _engine.count(self._data, needle, start, end)
+
+    def line_span(self, offset: int) -> tuple[int, int]:
+        """Content span of the line containing offset."""
+        self._check_open()
+        return _engine.line_span(self._data, offset)
+
+    def line(self, offset: int) -> bytes:
+        """The line containing offset, without its terminator."""
+        return self.read(*self.line_span(offset))
+
+    def lines(
+        self, start: int = 0, end: int | None = None
+    ) -> Iterator[tuple[int, int]]:
+        """Content spans of the lines overlapping [start, end)."""
+        self._check_open()
+        return _engine.iter_line_spans(self._data, start, end)
+
+    def advance_lines(self, offset: int, n: int) -> int:
+        """Start of the line n lines from the one holding offset."""
+        self._check_open()
+        return _engine.advance_lines(self._data, offset, n)
+
+    def line_number(self, offset: int) -> int:
+        """One based line number of offset, for provenance and messages."""
+        self._check_open()
+        return _engine.line_number(self._data, offset)
 
     def close(self) -> None:
         if self._closed:

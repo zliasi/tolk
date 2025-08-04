@@ -112,3 +112,88 @@ def find_nth(
 def _check_needle(needle: bytes) -> None:
     if not needle:
         raise ValueError("needle must not be empty")
+
+
+NEWLINE = b"\n"
+
+
+def line_start(haystack: Haystack, offset: int) -> int:
+    """Offset where the line containing offset begins.
+
+    An offset sitting on a newline belongs to the line that newline ends,
+    not the one it starts.
+    """
+    nl = rfind(haystack, NEWLINE, 0, offset)
+    return 0 if nl < 0 else nl + 1
+
+
+def line_end(haystack: Haystack, offset: int) -> int:
+    """Offset just past the content of the line containing offset.
+
+    The newline itself is excluded, and so is a carriage return before it,
+    so the span is the line's text rather than its bytes on disk.
+    """
+    nl = find(haystack, NEWLINE, offset)
+    if nl < 0:
+        nl = len(haystack)
+    if nl > offset and haystack[nl - 1 : nl] == b"\r":
+        return nl - 1
+    return nl
+
+
+def line_span(haystack: Haystack, offset: int) -> tuple[int, int]:
+    """Content span of the line containing offset."""
+    return line_start(haystack, offset), line_end(haystack, offset)
+
+
+def iter_line_spans(
+    haystack: Haystack, start: int = 0, end: int | None = None
+) -> Iterator[tuple[int, int]]:
+    """Content spans of the lines overlapping [start, end).
+
+    Lines are found as they are needed, so nothing outside the requested
+    region is ever touched. The first line is entered at its true start even
+    if start lands mid line.
+    """
+    size = len(haystack)
+    limit = size if end is None else min(end, size)
+    pos = line_start(haystack, start)
+    while pos <= limit:
+        stop = line_end(haystack, pos)
+        yield pos, stop
+        nl = find(haystack, NEWLINE, stop)
+        if nl < 0:
+            return
+        pos = nl + 1
+        if pos > limit:
+            return
+
+
+def advance_lines(haystack: Haystack, offset: int, n: int) -> int:
+    """Start offset of the line n lines away from the one holding offset.
+
+    Walks off the end to the file size, and off the front to zero, rather
+    than failing, so callers can clamp instead of guarding every step.
+    """
+    pos = line_start(haystack, offset)
+    if n > 0:
+        for _ in range(n):
+            nl = find(haystack, NEWLINE, pos)
+            if nl < 0:
+                return len(haystack)
+            pos = nl + 1
+    else:
+        for _ in range(-n):
+            if pos == 0:
+                return 0
+            pos = line_start(haystack, pos - 1)
+    return pos
+
+
+def line_number(haystack: Haystack, offset: int) -> int:
+    """One based line number of offset.
+
+    This is the one operation that has to read everything before the offset,
+    so it stays opt in and is only used for provenance and error messages.
+    """
+    return count(haystack, NEWLINE, 0, line_start(haystack, offset)) + 1
