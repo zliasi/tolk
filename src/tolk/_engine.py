@@ -156,6 +156,8 @@ def iter_line_spans(
     if start lands mid line.
     """
     size = len(haystack)
+    if size == 0:
+        return
     limit = size if end is None else min(end, size)
     pos = line_start(haystack, start)
     while pos <= limit:
@@ -165,7 +167,9 @@ def iter_line_spans(
         if nl < 0:
             return
         pos = nl + 1
-        if pos > limit:
+        # A trailing newline ends the last line, it does not open an empty
+        # one. Blank lines in the middle of the file still come through.
+        if pos >= size or pos > limit:
             return
 
 
