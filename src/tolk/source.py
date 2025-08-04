@@ -131,6 +131,36 @@ class Source:
         self._check_open()
         return _engine.count(self._data, needle, start, end)
 
+    def head_span(self, nbytes: int, *, whole_lines: bool = False) -> tuple[int, int]:
+        """Span of the first nbytes, optionally trimmed to whole lines."""
+        self._check_open()
+        end = min(nbytes, self.size)
+        if whole_lines and end < self.size:
+            end = _engine.line_start(self._data, end)
+        return 0, end
+
+    def tail_span(self, nbytes: int, *, whole_lines: bool = True) -> tuple[int, int]:
+        """Span of the last nbytes, by default starting at a line boundary.
+
+        This is the cheap path for status checks. A terminator line lives at
+        the end of an output file, so a few kilobytes answer the question
+        without the rest of the file ever being paged in.
+        """
+        self._check_open()
+        start = max(0, self.size - nbytes)
+        if whole_lines and start > 0:
+            # Skip the partial line the cut landed inside.
+            start = _engine.advance_lines(self._data, start, 1)
+        return start, self.size
+
+    def head(self, nbytes: int, *, whole_lines: bool = False) -> bytes:
+        """The first nbytes of the file."""
+        return self.read(*self.head_span(nbytes, whole_lines=whole_lines))
+
+    def tail(self, nbytes: int, *, whole_lines: bool = True) -> bytes:
+        """The last nbytes of the file."""
+        return self.read(*self.tail_span(nbytes, whole_lines=whole_lines))
+
     def line_span(self, offset: int) -> tuple[int, int]:
         """Content span of the line containing offset."""
         self._check_open()
