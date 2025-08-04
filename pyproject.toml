@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tolk"
+description = "Fast parser and IO framework"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Zach Liasi" }]
+requires-python = ">=3.11"
+dependencies = []
+dynamic = ["version"]
+
+[project.optional-dependencies]
+# The C engine is optional. Without it tolk falls back to a pure-Python
+# backend with the same interface, so an uncompiled checkout still works.
+speed = ["cffi>=1.16"]
+
+[project.scripts]
+tolk = "tolk.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "tolk._version.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
