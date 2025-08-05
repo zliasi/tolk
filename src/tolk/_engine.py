@@ -194,6 +194,53 @@ def advance_lines(haystack: Haystack, offset: int, n: int) -> int:
     return pos
 
 
+class _Blank:
+    """Sentinel meaning the block ends at the first empty line."""
+
+    def __repr__(self) -> str:
+        return "BLANK"
+
+
+BLANK = _Blank()
+
+Until = _Blank | bytes | None
+
+
+def block_span(
+    haystack: Haystack,
+    offset: int,
+    *,
+    skip: int = 0,
+    until: Until = None,
+    max_lines: int | None = None,
+) -> tuple[int, int]:
+    """Span of the block reached by skipping lines from offset.
+
+    Blocks are how tabular output is addressed. An anchor names a header,
+    skip steps over the header and its rule lines, and until says what ends
+    the run: BLANK for the first empty line, or a literal that begins a line
+    once leading whitespace is dropped.
+    """
+    size = len(haystack)
+    start = advance_lines(haystack, offset, skip)
+    if start >= size:
+        return size, size
+    end = start
+    taken = 0
+    for line_from, line_to in iter_line_spans(haystack, start):
+        if max_lines is not None and taken >= max_lines:
+            break
+        if until is BLANK and line_from == line_to:
+            break
+        if isinstance(until, bytes) and bytes(
+            haystack[line_from:line_to]
+        ).lstrip().startswith(until):
+            break
+        end = line_to
+        taken += 1
+    return start, end
+
+
 def line_number(haystack: Haystack, offset: int) -> int:
     """One based line number of offset.
 

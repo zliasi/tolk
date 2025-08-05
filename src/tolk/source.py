@@ -177,6 +177,32 @@ class Source:
         self._check_open()
         return _engine.iter_line_spans(self._data, start, end)
 
+    def block_span(
+        self,
+        offset: int,
+        *,
+        skip: int = 0,
+        until: _engine.Until = None,
+        max_lines: int | None = None,
+    ) -> tuple[int, int]:
+        """Span of the block reached by skipping lines from offset."""
+        self._check_open()
+        return _engine.block_span(
+            self._data, offset, skip=skip, until=until, max_lines=max_lines
+        )
+
+    def block_lines(
+        self,
+        offset: int,
+        *,
+        skip: int = 0,
+        until: _engine.Until = None,
+        max_lines: int | None = None,
+    ) -> list[bytes]:
+        """Lines of the block reached by skipping lines from offset."""
+        span = self.block_span(offset, skip=skip, until=until, max_lines=max_lines)
+        return [self.read(a, b) for a, b in self.lines(*span)]
+
     def advance_lines(self, offset: int, n: int) -> int:
         """Start of the line n lines from the one holding offset."""
         self._check_open()
