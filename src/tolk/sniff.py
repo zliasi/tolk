@@ -70,3 +70,16 @@ def sniff_source(src: Source) -> str | None:
         if sig.matches_extension(suffix):
             return sig.format
     return None
+
+
+# Built in signatures. These are the format agnostic ones, so they live here
+# rather than in a spec pack. Program specific signatures arrive with the
+# specs that need them.
+for _sig in (
+    Signature("xyz", extensions=(".xyz",), priority=10),
+    Signature("csv", extensions=(".csv",), priority=10),
+    Signature("tsv", extensions=(".tsv", ".tab"), priority=10),
+    # Weakest evidence, so anything with real content wins over it.
+    Signature("text", extensions=(".txt", ".log"), priority=-10),
+):
+    register(_sig)
