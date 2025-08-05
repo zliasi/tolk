@@ -46,6 +46,16 @@ class Source:
 
     __slots__ = ("path", "size", "_fd", "_map", "_data", "_view", "_closed")
 
+    path: str
+    size: int
+    _fd: int
+    _map: mmap.mmap | None
+    # Search runs against the underlying object rather than the view, because
+    # memoryview has no find. bytes and mmap both do.
+    _data: _engine.Haystack
+    _view: memoryview
+    _closed: bool
+
     def __init__(
         self, path: str | os.PathLike[str], *, small_file_limit: int = SMALL_FILE_LIMIT
     ) -> None:

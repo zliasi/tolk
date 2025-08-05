@@ -105,7 +105,9 @@ class BlockTest(unittest.TestCase):
     def lines(self, **kwargs: object) -> list[bytes]:
         offset = _engine.find(TABLE, b"HEADER")
         start, end = _engine.block_span(TABLE, offset, **kwargs)  # type: ignore[arg-type]
-        return [bytes(TABLE[a:b]) for a, b in _engine.iter_line_spans(TABLE, start, end)]
+        return [
+            bytes(TABLE[a:b]) for a, b in _engine.iter_line_spans(TABLE, start, end)
+        ]
 
     def test_stop_on_blank(self) -> None:
         self.assertEqual(
