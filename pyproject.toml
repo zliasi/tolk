@@ -26,6 +26,9 @@ version = { attr = "tolk._version.__version__" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+tolk = ["py.typed"]
+
 [tool.black]
 line-length = 88
 
