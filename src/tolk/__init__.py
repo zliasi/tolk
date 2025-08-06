@@ -7,8 +7,8 @@ its own.
 """
 
 from ._engine import BLANK
+from ._sniff import Signature, sniff
 from ._version import __version__
-from .sniff import Signature, sniff
 from .source import Source, open
 
 __all__ = [
