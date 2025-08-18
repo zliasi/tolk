@@ -103,10 +103,16 @@ def _table_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
             # and continuation lines turn up inside real blocks.
             continue
         row: dict[str, Any] = {}
+        readable = 0
         for column, index in rule.columns.items():
             value, error = _convert(fields[index], rule)
             row[column] = None if error is not None else value
-        rows.append(row)
+            readable += error is None
+        # A line where nothing converts is furniture, a rule or a separator
+        # that happens to have enough fields. A line where only some columns
+        # fail is data with a hole in it, and is kept.
+        if readable:
+            rows.append(row)
 
     if not rows:
         return Value.missing(quantity.name, "block held no readable rows", src.path)
