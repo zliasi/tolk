@@ -8,6 +8,9 @@ the engine. Nothing in this module knows what any particular format contains.
 from __future__ import annotations
 
 import dataclasses
+import os
+import pathlib
+import tomllib
 from dataclasses import dataclass
 
 # What a block stops on when until is not a literal.
@@ -119,3 +122,189 @@ class Spec:
 
     def names(self) -> list[str]:
         return sorted(self.quantities)
+
+
+def loads(text: str, source: str = "<string>") -> Spec:
+    """Parse a spec from TOML text.
+
+    Validation is strict and happens here, so a typo in a spec fails at load
+    time with a message naming the file and the key, rather than silently
+    extracting nothing an hour into a batch run.
+    """
+    try:
+        raw = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
+        raise SpecError(f"{source}: {exc}") from None
+
+    _reject_unknown(raw, _SPEC_KEYS, source, "top level")
+    fmt = raw.get("format")
+    if not isinstance(fmt, str) or not fmt:
+        raise SpecError(f"{source}: needs a non-empty format name")
+
+    signature = _table(raw, "signature", source)
+    _reject_unknown(signature, _SIGNATURE_KEYS, source, "signature")
+    terminator = _table(raw, "terminator", source)
+    _reject_unknown(terminator, _TERMINATOR_KEYS, source, "terminator")
+
+    quantities = {}
+    for name, body in _table(raw, "quantity", source).items():
+        where = f"quantity.{name}"
+        if not isinstance(body, dict):
+            raise SpecError(f"{source}: {where} must be a table")
+        quantities[name] = _quantity(name, body, source, where)
+
+    return Spec(
+        format=fmt,
+        quantities=quantities,
+        terminators=Terminators(
+            ok=_literals(terminator, "ok", source, "terminator"),
+            error=_literals(terminator, "error", source, "terminator"),
+        ),
+        contains=_literals(signature, "contains", source, "signature"),
+        extensions=tuple(_strings(signature, "extensions", source, "signature")),
+        priority=_int(signature, "priority", source, "signature", 0),
+        source=source,
+    )
+
+
+def load(path: str | os.PathLike[str]) -> Spec:
+    """Parse a spec from a TOML file."""
+    text = pathlib.Path(path).read_text(encoding="utf-8")
+    return loads(text, str(path))
+
+
+_SPEC_KEYS = frozenset({"format", "signature", "terminator", "quantity"})
+_SIGNATURE_KEYS = frozenset({"contains", "extensions", "priority"})
+_TERMINATOR_KEYS = frozenset({"ok", "error"})
+_QUANTITY_KEYS = frozenset({"anchor", "occurrence", "block", "parse", "description"})
+_BLOCK_KEYS = frozenset({"skip", "until", "max_lines"})
+_PARSE_KEYS = frozenset({"type", "unit", "field", "columns", "table"})
+
+
+def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Quantity:
+    _reject_unknown(body, _QUANTITY_KEYS, source, where)
+    anchor = body.get("anchor")
+    if not isinstance(anchor, str) or not anchor:
+        raise SpecError(f"{source}: {where} needs a non-empty anchor")
+
+    occurrence = body.get("occurrence", "last")
+    if occurrence not in ("first", "last") and not isinstance(occurrence, int):
+        raise SpecError(
+            f"{source}: {where}.occurrence must be first, last, or an integer"
+        )
+
+    block = None
+    if "block" in body:
+        raw_block = body["block"]
+        if not isinstance(raw_block, dict):
+            raise SpecError(f"{source}: {where}.block must be a table")
+        _reject_unknown(raw_block, _BLOCK_KEYS, source, f"{where}.block")
+        block = BlockRule(
+            skip=_int(raw_block, "skip", source, f"{where}.block", 0),
+            until=_optional_str(raw_block, "until", source, f"{where}.block"),
+            max_lines=_optional_int(raw_block, "max_lines", source, f"{where}.block"),
+        )
+
+    parse = ParseRule()
+    if "parse" in body:
+        raw_parse = body["parse"]
+        if not isinstance(raw_parse, dict):
+            raise SpecError(f"{source}: {where}.parse must be a table")
+        _reject_unknown(raw_parse, _PARSE_KEYS, source, f"{where}.parse")
+        kind = raw_parse.get("type", "float")
+        if kind not in SCALAR_TYPES:
+            raise SpecError(
+                f"{source}: {where}.parse.type must be one of "
+                f"{', '.join(SCALAR_TYPES)}"
+            )
+        columns = raw_parse.get("columns", {})
+        if not isinstance(columns, dict) or not all(
+            isinstance(v, int) for v in columns.values()
+        ):
+            raise SpecError(
+                f"{source}: {where}.parse.columns must map names to field indices"
+            )
+        parse = ParseRule(
+            type=kind,
+            unit=_optional_str(raw_parse, "unit", source, f"{where}.parse"),
+            field=_optional_int(raw_parse, "field", source, f"{where}.parse"),
+            columns={str(k): int(v) for k, v in columns.items()},
+            table=bool(raw_parse.get("table", False)),
+        )
+
+    if parse.is_table and block is None:
+        raise SpecError(f"{source}: {where} reads a table but defines no block")
+    if not parse.is_table and parse.field is None and block is None:
+        raise SpecError(
+            f"{source}: {where} needs parse.field, parse.columns, or a block"
+        )
+
+    return Quantity(
+        name=name,
+        anchor=anchor.encode(),
+        occurrence=occurrence,
+        block=block,
+        parse=parse,
+        description=_optional_str(body, "description", source, where) or "",
+    )
+
+
+def _table(raw: dict[str, object], key: str, source: str) -> dict[str, object]:
+    value = raw.get(key, {})
+    if not isinstance(value, dict):
+        raise SpecError(f"{source}: {key} must be a table")
+    return value
+
+
+def _reject_unknown(
+    body: dict[str, object], allowed: frozenset[str], source: str, where: str
+) -> None:
+    unknown = sorted(set(body) - allowed)
+    if unknown:
+        raise SpecError(
+            f"{source}: {where} has unknown key(s) {', '.join(unknown)}, "
+            f"allowed: {', '.join(sorted(allowed))}"
+        )
+
+
+def _strings(body: dict[str, object], key: str, source: str, where: str) -> list[str]:
+    value = body.get(key, [])
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise SpecError(f"{source}: {where}.{key} must be a string or list of strings")
+    return [str(v) for v in value]
+
+
+def _literals(
+    body: dict[str, object], key: str, source: str, where: str
+) -> tuple[bytes, ...]:
+    return tuple(v.encode() for v in _strings(body, key, source, where))
+
+
+def _int(
+    body: dict[str, object], key: str, source: str, where: str, default: int
+) -> int:
+    value = body.get(key, default)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise SpecError(f"{source}: {where}.{key} must be an integer")
+    return value
+
+
+def _optional_int(
+    body: dict[str, object], key: str, source: str, where: str
+) -> int | None:
+    if key not in body:
+        return None
+    return _int(body, key, source, where, 0)
+
+
+def _optional_str(
+    body: dict[str, object], key: str, source: str, where: str
+) -> str | None:
+    if key not in body:
+        return None
+    value = body[key]
+    if not isinstance(value, str):
+        raise SpecError(f"{source}: {where}.{key} must be a string")
+    return value
