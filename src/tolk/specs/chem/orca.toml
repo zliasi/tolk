@@ -1,0 +1,49 @@
+format = "orca"
+
+[signature]
+contains = ["* O   R   C   A *"]
+extensions = [".out"]
+priority = 50
+
+[terminator]
+ok = ["****ORCA TERMINATED NORMALLY****"]
+error = [
+    "ORCA finished by error termination",
+    "aborting the run",
+]
+
+[quantity.version]
+anchor = "Program Version"
+occurrence = "first"
+description = "ORCA release string"
+parse = { field = 2, type = "str" }
+
+[quantity.energy]
+anchor = "FINAL SINGLE POINT ENERGY"
+occurrence = "last"
+description = "final single point energy of the last completed step"
+parse = { field = -1, type = "float", unit = "hartree" }
+
+[quantity.geometry]
+anchor = "CARTESIAN COORDINATES (ANGSTROEM)"
+occurrence = "last"
+description = "final cartesian geometry"
+block = { skip = 2, until = "blank" }
+parse.columns = { symbol = 0, x = 1, y = 2, z = 3 }
+parse.types = { symbol = "str" }
+parse.unit = "angstrom"
+
+# The transition label reads "0-1A  ->  1-1A", which is three whitespace
+# fields, so the numbers start at index 3 rather than index 1.
+[quantity.excitations]
+anchor = "ABSORPTION SPECTRUM VIA TRANSITION ELECTRIC DIPOLE MOMENTS"
+occurrence = "first"
+description = "electric dipole absorption spectrum"
+block = { skip = 5, until = "blank" }
+parse.columns = { energy_ev = 3, wavenumber_cm = 4, wavelength_nm = 5, fosc = 6 }
+
+[quantity.dipole]
+anchor = "Magnitude (Debye)"
+occurrence = "last"
+description = "total dipole moment"
+parse = { field = -1, type = "float", unit = "debye" }
