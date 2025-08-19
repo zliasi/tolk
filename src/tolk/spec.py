@@ -61,11 +61,20 @@ class ParseRule:
     unit: str | None = None
     field: int | None = None
     columns: dict[str, int] = dataclasses.field(default_factory=dict)
+    types: dict[str, str] = dataclasses.field(default_factory=dict)
     table: bool = False
 
     @property
     def is_table(self) -> bool:
         return self.table or bool(self.columns)
+
+    def column_type(self, column: str) -> str:
+        """Type for one column, falling back to the rule wide default.
+
+        Real tables mix a label with its numbers, so a per column override is
+        the difference between a spec and a special case in code.
+        """
+        return self.types.get(column, self.type)
 
 
 @dataclass(frozen=True)
@@ -178,7 +187,7 @@ _SIGNATURE_KEYS = frozenset({"contains", "extensions", "priority"})
 _TERMINATOR_KEYS = frozenset({"ok", "error"})
 _QUANTITY_KEYS = frozenset({"anchor", "occurrence", "block", "parse", "description"})
 _BLOCK_KEYS = frozenset({"skip", "until", "max_lines"})
-_PARSE_KEYS = frozenset({"type", "unit", "field", "columns", "table"})
+_PARSE_KEYS = frozenset({"type", "unit", "field", "columns", "types", "table"})
 
 
 def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Quantity:
@@ -224,11 +233,27 @@ def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Qu
             raise SpecError(
                 f"{source}: {where}.parse.columns must map names to field indices"
             )
+        types = raw_parse.get("types", {})
+        if not isinstance(types, dict) or not all(
+            v in SCALAR_TYPES for v in types.values()
+        ):
+            raise SpecError(
+                f"{source}: {where}.parse.types must map column names to "
+                f"one of {', '.join(SCALAR_TYPES)}"
+            )
+        unknown_typed = sorted(set(types) - set(columns))
+        if unknown_typed:
+            raise SpecError(
+                f"{source}: {where}.parse.types names columns that do not "
+                f"exist: {', '.join(unknown_typed)}"
+            )
+
         parse = ParseRule(
             type=kind,
             unit=_optional_str(raw_parse, "unit", source, f"{where}.parse"),
             field=_optional_int(raw_parse, "field", source, f"{where}.parse"),
             columns={str(k): int(v) for k, v in columns.items()},
+            types={str(k): str(v) for k, v in types.items()},
             table=bool(raw_parse.get("table", False)),
         )
 

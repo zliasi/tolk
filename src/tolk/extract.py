@@ -11,7 +11,7 @@ from typing import Any
 
 from . import _engine
 from .source import Source
-from .spec import ParseRule, Quantity, Spec
+from .spec import Quantity, Spec
 from .value import Provenance, Value
 
 
@@ -72,7 +72,7 @@ def _scalar_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
             src.path,
         )
 
-    value, error = _convert(text, rule)
+    value, error = _convert(text, rule.type)
     if error is not None:
         return Value.missing(quantity.name, error, src.path)
     return Value(quantity.name, value, rule.unit, where)
@@ -105,7 +105,7 @@ def _table_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
         row: dict[str, Any] = {}
         readable = 0
         for column, index in rule.columns.items():
-            value, error = _convert(fields[index], rule)
+            value, error = _convert(fields[index], rule.column_type(column))
             row[column] = None if error is not None else value
             readable += error is None
         # A line where nothing converts is furniture, a rule or a separator
@@ -119,14 +119,14 @@ def _table_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
     return Value(quantity.name, rows, rule.unit, where)
 
 
-def _convert(raw: bytes, rule: ParseRule) -> tuple[Any, str | None]:
+def _convert(raw: bytes, kind: str) -> tuple[Any, str | None]:
     """Turn one field into a typed value, or say why it could not be."""
     text = raw.decode("utf-8", errors="replace")
-    if rule.type == "str":
+    if kind == "str":
         return text, None
     try:
-        if rule.type == "int":
+        if kind == "int":
             return int(text), None
         return float(text), None
     except ValueError:
-        return None, f"{text!r} is not a {rule.type}"
+        return None, f"{text!r} is not a {kind}"
