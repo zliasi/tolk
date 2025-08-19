@@ -1,7 +1,10 @@
-.PHONY: test check
+.PHONY: test goldens check
 
 test:
 	python3 -m unittest discover -s tests
+
+goldens:
+	python3 tests/update-goldens.py
 
 PY_FILES = src/tolk tests
 

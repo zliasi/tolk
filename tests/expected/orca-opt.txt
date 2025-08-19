@@ -1,0 +1,35 @@
+quantity version (orca, <specs>/orca.toml)
+anchor   'Program Version' occurrence first
+found    byte 3667, line 54
+line     Program Version 6.1.0  -  RELEASE   -
+rule     field 2 as str
+value    6.1.0
+
+quantity energy (orca, <specs>/orca.toml)
+anchor   'FINAL SINGLE POINT ENERGY' occurrence last
+found    byte 3934, line 63
+line     FINAL SINGLE POINT ENERGY      -270.965189516826
+rule     field -1 as float
+value    -270.965189516826 hartree
+
+quantity dipole (orca, <specs>/orca.toml)
+anchor   'Magnitude (Debye)' occurrence last
+found    byte 5292, line 94
+line     Magnitude (Debye)      :      0.021864299
+rule     field -1 as float
+value    0.021864299 debye
+
+quantity geometry (orca, <specs>/orca.toml)
+anchor   'CARTESIAN COORDINATES (ANGSTROEM)' occurrence last
+found    byte 4033, line 66
+line     CARTESIAN COORDINATES (ANGSTROEM)
+block    15 lines
+         C      0.035760   -1.136467    0.299262
+         C     -0.011666    1.094815    0.358093
+         C      0.026733   -0.048741    1.400863
+         C      1.223477    0.694512   -0.460501
+         C      1.251947   -0.641309   -0.495771
+         C     -1.249138    0.640998   -0.428263
+         ... 9 more
+rule     columns symbol=0, x=1, y=2, z=3
+value    15 rows of symbol, x, y, z
