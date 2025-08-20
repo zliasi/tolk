@@ -9,13 +9,23 @@ its own.
 from ._engine import BLANK
 from ._sniff import Signature, sniff
 from ._version import __version__
+from .api import explain, formats, get, spec
 from .source import Source, open
+from .spec import SpecError
+from .value import Provenance, Value
 
 __all__ = [
     "BLANK",
+    "Provenance",
     "Signature",
     "Source",
+    "SpecError",
+    "Value",
     "__version__",
+    "explain",
+    "formats",
+    "get",
     "open",
     "sniff",
+    "spec",
 ]

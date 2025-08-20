@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from tolk import registry
-from tolk.explain import explain_text
+from tolk._explain import explain_text
 from tolk.source import Source
 
 HERE = os.path.dirname(os.path.abspath(__file__))
