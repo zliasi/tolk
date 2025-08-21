@@ -7,9 +7,9 @@ its own.
 """
 
 from ._engine import BLANK
-from ._sniff import Signature, sniff
+from ._sniff import Signature
 from ._version import __version__
-from .api import explain, formats, get, spec
+from .api import explain, formats, get, sniff, spec
 from .source import Source, open
 from .spec import SpecError
 from .value import Provenance, Value

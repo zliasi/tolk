@@ -16,6 +16,17 @@ from .spec import Spec, SpecError
 from .value import Value
 
 
+def sniff(path: str | os.PathLike[str]) -> str | None:
+    """Name the format of a file, or None when nothing matches.
+
+    Loading the registry is what teaches the sniffer about spec signatures,
+    so it has to happen first. The raw sniffer in _sniff only knows the
+    format agnostic builtins.
+    """
+    registry.load_all()
+    return _sniff.sniff(path)
+
+
 def formats() -> list[str]:
     """Every format a spec is available for."""
     return registry.formats()
@@ -56,8 +67,6 @@ def explain(
 def _resolve(src: Source, format: str | None) -> Spec:
     if format is not None:
         return registry.get(format)
-    # Loading the registry is what teaches the sniffer about spec signatures,
-    # so it has to happen before the sniff rather than after.
     registry.load_all()
     detected = _sniff.sniff_source(src)
     if detected is None:
