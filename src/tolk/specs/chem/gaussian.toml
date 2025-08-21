@@ -1,0 +1,68 @@
+format = "gaussian"
+
+[signature]
+contains = ["Entering Gaussian System"]
+extensions = [".log"]
+priority = 50
+
+[terminator]
+ok = ["Normal termination of Gaussian"]
+error = ["Error termination"]
+
+[quantity.version]
+anchor = "Gaussian 16, Revision"
+occurrence = "first"
+description = "Gaussian release string"
+parse = { field = -1, type = "str", strip = "," }
+
+[quantity.energy]
+anchor = "SCF Done:"
+occurrence = "last"
+description = "converged SCF energy"
+# The method name sits in the middle of the line, so the value is counted
+# from the left rather than the right.
+parse = { field = 4, type = "float", unit = "hartree" }
+
+[quantity.zpe_correction]
+anchor = "Zero-point correction="
+occurrence = "last"
+description = "zero point vibrational correction"
+parse = { field = 2, type = "float", unit = "hartree" }
+
+[quantity.energy_zpe]
+anchor = "Sum of electronic and zero-point Energies="
+occurrence = "last"
+description = "electronic energy plus zero point correction"
+parse = { field = -1, type = "float", unit = "hartree" }
+
+[quantity.enthalpy]
+anchor = "Sum of electronic and thermal Enthalpies="
+occurrence = "last"
+description = "thermal enthalpy"
+parse = { field = -1, type = "float", unit = "hartree" }
+
+[quantity.free_energy]
+anchor = "Sum of electronic and thermal Free Energies="
+occurrence = "last"
+description = "thermal Gibbs free energy"
+parse = { field = -1, type = "float", unit = "hartree" }
+
+[quantity.geometry]
+anchor = "Standard orientation:"
+occurrence = "last"
+description = "final standard orientation geometry"
+block = { skip = 5, until = "---" }
+parse.columns = { center = 0, atomic_number = 1, x = 3, y = 4, z = 5 }
+parse.types = { center = "int", atomic_number = "int" }
+parse.unit = "angstrom"
+
+# Gaussian prints one line per excited state instead of a table, so every
+# occurrence is wanted rather than one of them. The oscillator strength
+# arrives as "f=0.0131", which strip reduces to the number.
+[quantity.excitations]
+anchor = "Excited State"
+occurrence = "all"
+description = "TD-DFT excited states"
+parse.columns = { state = 2, symmetry = 3, energy_ev = 4, wavelength_nm = 6, fosc = 8 }
+parse.types = { state = "int", symmetry = "str" }
+parse.strip = "f=:"
