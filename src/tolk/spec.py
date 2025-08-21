@@ -62,6 +62,7 @@ class ParseRule:
     field: int | None = None
     columns: dict[str, int] = dataclasses.field(default_factory=dict)
     types: dict[str, str] = dataclasses.field(default_factory=dict)
+    strip: str = ""
     table: bool = False
 
     @property
@@ -187,7 +188,7 @@ _SIGNATURE_KEYS = frozenset({"contains", "extensions", "priority"})
 _TERMINATOR_KEYS = frozenset({"ok", "error"})
 _QUANTITY_KEYS = frozenset({"anchor", "occurrence", "block", "parse", "description"})
 _BLOCK_KEYS = frozenset({"skip", "until", "max_lines"})
-_PARSE_KEYS = frozenset({"type", "unit", "field", "columns", "types", "table"})
+_PARSE_KEYS = frozenset({"type", "unit", "field", "columns", "types", "strip", "table"})
 
 
 def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Quantity:
@@ -254,6 +255,7 @@ def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Qu
             field=_optional_int(raw_parse, "field", source, f"{where}.parse"),
             columns={str(k): int(v) for k, v in columns.items()},
             types={str(k): str(v) for k, v in types.items()},
+            strip=_optional_str(raw_parse, "strip", source, f"{where}.parse") or "",
             table=bool(raw_parse.get("table", False)),
         )
 

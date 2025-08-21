@@ -72,7 +72,7 @@ def _scalar_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
             src.path,
         )
 
-    value, error = _convert(text, rule.type)
+    value, error = _convert(text, rule.type, rule.strip)
     if error is not None:
         return Value.missing(quantity.name, error, src.path)
     return Value(quantity.name, value, rule.unit, where)
@@ -105,7 +105,7 @@ def _table_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
         row: dict[str, Any] = {}
         readable = 0
         for column, index in rule.columns.items():
-            value, error = _convert(fields[index], rule.column_type(column))
+            value, error = _convert(fields[index], rule.column_type(column), rule.strip)
             row[column] = None if error is not None else value
             readable += error is None
         # A line where nothing converts is furniture, a rule or a separator
@@ -119,9 +119,16 @@ def _table_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
     return Value(quantity.name, rows, rule.unit, where)
 
 
-def _convert(raw: bytes, kind: str) -> tuple[Any, str | None]:
-    """Turn one field into a typed value, or say why it could not be."""
+def _convert(raw: bytes, kind: str, strip: str = "") -> tuple[Any, str | None]:
+    """Turn one field into a typed value, or say why it could not be.
+
+    strip removes the punctuation programs glue onto values, the comma after
+    a revision string or the "f=" in front of an oscillator strength, so a
+    spec can read them without a regex.
+    """
     text = raw.decode("utf-8", errors="replace")
+    if strip:
+        text = text.strip(strip)
     if kind == "str":
         return text, None
     try:
