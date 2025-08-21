@@ -23,6 +23,18 @@ EXPECTED = os.path.join(HERE, "expected")
 CASES = [
     ("orca-opt", "orca", "orca-opt.out", ["version", "energy", "dipole", "geometry"]),
     ("orca-tddft", "orca", "orca-tddft.out", ["version", "energy", "excitations"]),
+    (
+        "gaussian-freq",
+        "gaussian",
+        "gaussian-freq.out",
+        ["version", "energy", "energy_zpe", "free_energy", "geometry"],
+    ),
+    (
+        "gaussian-td",
+        "gaussian",
+        "gaussian-td.out",
+        ["version", "energy", "excitations"],
+    ),
 ]
 
 

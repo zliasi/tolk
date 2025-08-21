@@ -46,6 +46,10 @@ def explain(src: Source, spec: Spec, name: str) -> Explanation:
     """Trace how a spec reads one quantity out of a source."""
     quantity = spec.quantity(name)
     value = extract_quantity(src, quantity, with_lines=True)
+
+    if quantity.repeats:
+        return _explain_repeated(src, spec, quantity, value)
+
     offset = src.find_nth(quantity.anchor, quantity.nth)
 
     if offset < 0:
@@ -71,6 +75,40 @@ def explain(src: Source, spec: Spec, name: str) -> Explanation:
         anchor_text=src.line(offset).decode("utf-8", errors="replace"),
         block_preview=preview,
         block_total=total,
+        rule=_describe_rule(quantity),
+        value=value,
+    )
+
+
+def _explain_repeated(
+    src: Source, spec: Spec, quantity: Quantity, value: Value
+) -> Explanation:
+    """Trace a quantity that is printed once per item rather than once."""
+    offsets = src.findall(quantity.anchor)
+    if not offsets:
+        return Explanation(
+            quantity=quantity.name,
+            format=spec.format,
+            spec_source=spec.source,
+            anchor=quantity.anchor,
+            occurrence=quantity.occurrence,
+            rule=_describe_rule(quantity),
+            value=value,
+        )
+    return Explanation(
+        quantity=quantity.name,
+        format=spec.format,
+        spec_source=spec.source,
+        anchor=quantity.anchor,
+        occurrence=quantity.occurrence,
+        offset=offsets[0],
+        line=src.line_number(offsets[0]),
+        anchor_text=src.line(offsets[0]).decode("utf-8", errors="replace"),
+        block_preview=[
+            src.line(off).decode("utf-8", errors="replace")
+            for off in offsets[:PREVIEW_LINES]
+        ],
+        block_total=len(offsets),
         rule=_describe_rule(quantity),
         value=value,
     )
@@ -125,7 +163,8 @@ def format_explanation(exp: Explanation) -> str:
     out.append(f"line     {exp.anchor_text.strip()}")
 
     if exp.block_total:
-        out.append(f"block    {exp.block_total} lines")
+        label = "matches" if exp.occurrence == "all" else "block"
+        out.append(f"{label:8s} {exp.block_total} lines")
         for text in exp.block_preview:
             out.append(f"         {text.strip()}")
         if exp.block_total > len(exp.block_preview):

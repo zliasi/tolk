@@ -1,0 +1,28 @@
+quantity version (gaussian, <specs>/gaussian.toml)
+anchor   'Gaussian 16, Revision' occurrence first
+found    byte 2544, line 58
+line     Gaussian 16, Revision A.03,
+rule     field -1 as str
+value    A.03
+
+quantity energy (gaussian, <specs>/gaussian.toml)
+anchor   'SCF Done:' occurrence last
+found    byte 2691, line 62
+line     SCF Done:  E(RPBE1PBE) =  -270.962124365     A.U. after   12 cycles
+rule     field 4 as float
+value    -270.962124365 hartree
+
+quantity excitations (gaussian, <specs>/gaussian.toml)
+anchor   'Excited State' occurrence all
+found    byte 2810, line 66
+line     Excited State   1:      Singlet-A      5.0706 eV  244.52 nm  f=0.0000  <S**2>=0.000
+matches  10 lines
+         Excited State   1:      Singlet-A      5.0706 eV  244.52 nm  f=0.0000  <S**2>=0.000
+         Excited State   2:      Singlet-A      5.7580 eV  215.32 nm  f=0.0131  <S**2>=0.000
+         Excited State   3:      Singlet-A      7.1307 eV  173.87 nm  f=0.0000  <S**2>=0.000
+         Excited State   4:      Singlet-A      7.2681 eV  170.59 nm  f=0.1859  <S**2>=0.000
+         Excited State   5:      Singlet-A      7.2977 eV  169.90 nm  f=0.0012  <S**2>=0.000
+         Excited State   6:      Singlet-A      7.7283 eV  160.43 nm  f=0.0191  <S**2>=0.000
+         ... 4 more
+rule     columns energy_ev=4, fosc=8, state=2, symmetry=3, wavelength_nm=6
+value    10 rows of energy_ev, fosc, state, symmetry, wavelength_nm

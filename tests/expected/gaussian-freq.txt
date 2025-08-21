@@ -1,0 +1,42 @@
+quantity version (gaussian, <specs>/gaussian.toml)
+anchor   'Gaussian 16, Revision' occurrence first
+found    byte 2541, line 58
+line     Gaussian 16, Revision A.03,
+rule     field -1 as str
+value    A.03
+
+quantity energy (gaussian, <specs>/gaussian.toml)
+anchor   'SCF Done:' occurrence last
+found    byte 2688, line 62
+line     SCF Done:  E(RPBE1PBE) =  -270.962124365     A.U. after   12 cycles
+rule     field 4 as float
+value    -270.962124365 hartree
+
+quantity energy_zpe (gaussian, <specs>/gaussian.toml)
+anchor   'Sum of electronic and zero-point Energies=' occurrence last
+found    byte 4703, line 93
+line     Sum of electronic and zero-point Energies=           -270.831983
+rule     field -1 as float
+value    -270.831983 hartree
+
+quantity free_energy (gaussian, <specs>/gaussian.toml)
+anchor   'Sum of electronic and thermal Free Energies=' occurrence last
+found    byte 4901, line 96
+line     Sum of electronic and thermal Free Energies=         -270.860121
+rule     field -1 as float
+value    -270.860121 hartree
+
+quantity geometry (gaussian, <specs>/gaussian.toml)
+anchor   'Standard orientation:' occurrence last
+found    byte 2782, line 64
+line     Standard orientation:
+block    15 lines
+         1          6           0       -0.000170   -1.117900    0.257502
+         2          6           0        0.000186    1.117800    0.257702
+         3          6           0       -0.000092   -0.000200    1.310902
+         4          6           0        1.233755    0.673914   -0.508898
+         5          6           0        1.233561   -0.674086   -0.508998
+         6          6           0       -1.233445    0.674186   -0.508998
+         ... 9 more
+rule     columns atomic_number=1, center=0, x=3, y=4, z=5
+value    15 rows of atomic_number, center, x, y, z
