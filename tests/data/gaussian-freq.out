@@ -1,0 +1,102 @@
+ Entering Gaussian System, Link 0=/software/kemi/g16/avx2/g16/g16
+ Initial command:
+ /software/kemi/g16/avx2/g16/l1.exe "/scratch/63649727/6/Gau-434321.inp" -scrdir="/scratch/63649727/6/"
+ Entering Link 1 = /software/kemi/g16/avx2/g16/l1.exe PID=    434357.
+  
+ Copyright (c) 1988,1990,1992,1993,1995,1998,2003,2009,2016,
+            Gaussian, Inc.  All Rights Reserved.
+  
+ This is part of the Gaussian(R) 16 program.  It is based on
+ the Gaussian(R) 09 system (copyright 2009, Gaussian, Inc.),
+ the Gaussian(R) 03 system (copyright 2003, Gaussian, Inc.),
+ the Gaussian(R) 98 system (copyright 1998, Gaussian, Inc.),
+ the Gaussian(R) 94 system (copyright 1995, Gaussian, Inc.),
+ the Gaussian 92(TM) system (copyright 1992, Gaussian, Inc.),
+ the Gaussian 90(TM) system (copyright 1990, Gaussian, Inc.),
+ the Gaussian 88(TM) system (copyright 1988, Gaussian, Inc.),
+ the Gaussian 86(TM) system (copyright 1986, Carnegie Mellon
+ University), and the Gaussian 82(TM) system (copyright 1983,
+ Carnegie Mellon University). Gaussian is a federally registered
+ trademark of Gaussian, Inc.
+  
+ This software contains proprietary and confidential information,
+ including trade secrets, belonging to Gaussian, Inc.
+  
+ This software is provided under written license and may be
+ used, copied, transmitted, or stored only in accord with that
+ written license.
+  
+ The following legend is applicable only to US Government
+ contracts under FAR:
+  
+                    RESTRICTED RIGHTS LEGEND
+  
+ Use, reproduction and disclosure by the US Government is
+ subject to restrictions as set forth in subparagraphs (a)
+ and (c) of the Commercial Computer Software - Restricted
+ Rights clause in FAR 52.227-19.
+  
+ Gaussian, Inc.
+ 340 Quinnipiac St., Bldg. 40, Wallingford CT 06492
+  
+  
+ ---------------------------------------------------------------
+ Warning -- This program may not be used in any manner that
+ competes with the business of Gaussian, Inc. or will provide
+ assistance to any competitor of Gaussian, Inc.  The licensee
+ of this program is prohibited from giving any competitor of
+ Gaussian, Inc. access to this program.  By using this program,
+ the user acknowledges that Gaussian, Inc. is engaged in the
+ business of creating and licensing software in the field of
+ computational chemistry and represents and warrants to the
+ licensee that it is not a competitor of Gaussian, Inc. and that
+ it will not use this program in any manner prohibited above.
+ ---------------------------------------------------------------
+  
+
+ Cite this work as:
+ Gaussian 16, Revision A.03,
+ M. J. Frisch, G. W. Trucks, H. B. Schlegel, G. E. Scuseria, 
+ M. A. Robb, J. R. Cheeseman, G. Scalmani, V. Barone, 
+
+ SCF Done:  E(RPBE1PBE) =  -270.962124365     A.U. after   12 cycles
+
+                         Standard orientation:                         
+ ---------------------------------------------------------------------
+ Center     Atomic      Atomic             Coordinates (Angstroms)
+ Number     Number       Type             X           Y           Z
+ ---------------------------------------------------------------------
+      1          6           0       -0.000170   -1.117900    0.257502
+      2          6           0        0.000186    1.117800    0.257702
+      3          6           0       -0.000092   -0.000200    1.310902
+      4          6           0        1.233755    0.673914   -0.508898
+      5          6           0        1.233561   -0.674086   -0.508998
+      6          6           0       -1.233445    0.674186   -0.508998
+      7          6           0       -1.233739   -0.673714   -0.509098
+      8          1           0       -0.000441   -2.126600    0.667602
+      9          1           0        0.000357    2.126500    0.668002
+     10          1           0       -0.890792   -0.000038    1.954302
+     11          1           0        0.890408   -0.000262    1.954402
+     12          1           0        1.948900    1.316964   -0.996098
+     13          1           0       -1.948400    1.317536   -0.996198
+     14          1           0        1.948516   -1.317336   -0.996298
+     15          1           0       -1.948884   -1.316764   -0.996398
+ ---------------------------------------------------------------------
+ Rotational constants (GHZ):           4.3894634           3.6838805           3.2014864
+ Leave Link  202 at Thu Jul 30 14:06:45 2026, MaxMem=   805306368 cpu:               0.0 elap:               0.0
+
+ 
+ Zero-point correction=                           0.130141 (Hartree/Particle)
+ Thermal correction to Energy=                    0.135077
+ Thermal correction to Enthalpy=                  0.136021
+ Thermal correction to Gibbs Free Energy=         0.102004
+ Sum of electronic and zero-point Energies=           -270.831983
+ Sum of electronic and thermal Energies=              -270.827047
+ Sum of electronic and thermal Enthalpies=            -270.826103
+ Sum of electronic and thermal Free Energies=         -270.860121
+ 
+
+ Job cpu time:       0 days  0 hours  5 minutes 42.7 seconds.
+ Elapsed time:       0 days  0 hours  5 minutes 44.5 seconds.
+ File lengths (MBytes):  RWF=     36 Int=      0 D2E=      0 Chk=      2 Scr=      1
+ Normal termination of Gaussian 16 at Thu Jul 30 14:12:31 2026.
