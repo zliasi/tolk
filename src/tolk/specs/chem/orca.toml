@@ -2,7 +2,6 @@ format = "orca"
 
 [signature]
 contains = ["* O   R   C   A *"]
-extensions = [".out"]
 priority = 50
 
 [terminator]

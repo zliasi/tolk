@@ -2,7 +2,6 @@ format = "gaussian"
 
 [signature]
 contains = ["Entering Gaussian System"]
-extensions = [".log"]
 priority = 50
 
 [terminator]
