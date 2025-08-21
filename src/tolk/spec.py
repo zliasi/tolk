@@ -90,6 +90,16 @@ class Quantity:
     description: str = ""
 
     @property
+    def repeats(self) -> bool:
+        """Whether every occurrence is wanted rather than one of them.
+
+        Some programs print a quantity once per item instead of as a table,
+        one line per excited state or per optimisation cycle. Those are still
+        one quantity, so they come back as a list.
+        """
+        return self.occurrence == "all"
+
+    @property
     def nth(self) -> int:
         """The occurrence as an index that find_nth understands."""
         if self.occurrence == "first":
@@ -198,9 +208,9 @@ def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Qu
         raise SpecError(f"{source}: {where} needs a non-empty anchor")
 
     occurrence = body.get("occurrence", "last")
-    if occurrence not in ("first", "last") and not isinstance(occurrence, int):
+    if occurrence not in ("first", "last", "all") and not isinstance(occurrence, int):
         raise SpecError(
-            f"{source}: {where}.occurrence must be first, last, or an integer"
+            f"{source}: {where}.occurrence must be first, last, all, or an integer"
         )
 
     block = None
@@ -259,7 +269,7 @@ def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Qu
             table=bool(raw_parse.get("table", False)),
         )
 
-    if parse.is_table and block is None:
+    if parse.is_table and block is None and occurrence != "all":
         raise SpecError(f"{source}: {where} reads a table but defines no block")
     if not parse.is_table and parse.field is None and block is None:
         raise SpecError(

@@ -32,6 +32,9 @@ def extract_quantity(
     src: Source, quantity: Quantity, *, with_lines: bool = False
 ) -> Value:
     """Read one quantity, already resolved from its spec."""
+    if quantity.repeats:
+        return _repeated_value(src, quantity, with_lines=with_lines)
+
     offset = src.find_nth(quantity.anchor, quantity.nth)
     if offset < 0:
         return Value.missing(
@@ -49,6 +52,60 @@ def extract_quantity(
     if quantity.parse.is_table:
         return _table_value(src, quantity, where)
     return _scalar_value(src, quantity, where)
+
+
+def _repeated_value(src: Source, quantity: Quantity, *, with_lines: bool) -> Value:
+    """Read every occurrence of an anchor that prints one line each."""
+    offsets = src.findall(quantity.anchor)
+    if not offsets:
+        return Value.missing(
+            quantity.name,
+            f"anchor {quantity.anchor.decode(errors='replace')!r} not found",
+            src.path,
+        )
+
+    rule = quantity.parse
+    where = Provenance(
+        path=src.path,
+        offset=offsets[0],
+        line=src.line_number(offsets[0]) if with_lines else None,
+    )
+
+    rows: list[Any] = []
+    for offset in offsets:
+        fields = src.line(offset).split()
+        if rule.is_table:
+            row = _row(fields, quantity)
+            if row is not None:
+                rows.append(row)
+        elif rule.field is not None:
+            try:
+                raw = fields[rule.field]
+            except IndexError:
+                continue
+            value, error = _convert(raw, rule.type, rule.strip)
+            if error is None:
+                rows.append(value)
+
+    if not rows:
+        return Value.missing(
+            quantity.name, "no occurrence held a readable value", src.path
+        )
+    return Value(quantity.name, rows, rule.unit, where)
+
+
+def _row(fields: list[bytes], quantity: Quantity) -> dict[str, Any] | None:
+    """One record from a split line, or None when the line is furniture."""
+    rule = quantity.parse
+    if len(fields) <= max(rule.columns.values(), default=-1):
+        return None
+    row: dict[str, Any] = {}
+    readable = 0
+    for column, index in rule.columns.items():
+        value, error = _convert(fields[index], rule.column_type(column), rule.strip)
+        row[column] = None if error is not None else value
+        readable += error is None
+    return row if readable else None
 
 
 def _scalar_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
