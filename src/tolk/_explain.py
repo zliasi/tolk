@@ -27,7 +27,7 @@ class Explanation:
     quantity: str
     format: str
     spec_source: str
-    anchor: bytes
+    anchor: bytes | None
     occurrence: str | int
     offset: int | None = None
     line: int | None = None
@@ -50,7 +50,9 @@ def explain(src: Source, spec: Spec, name: str) -> Explanation:
     if quantity.repeats:
         return _explain_repeated(src, spec, quantity, value)
 
-    offset = src.find_nth(quantity.anchor, quantity.nth)
+    offset = (
+        0 if quantity.anchor is None else src.find_nth(quantity.anchor, quantity.nth)
+    )
 
     if offset < 0:
         return Explanation(
@@ -84,6 +86,7 @@ def _explain_repeated(
     src: Source, spec: Spec, quantity: Quantity, value: Value
 ) -> Explanation:
     """Trace a quantity that is printed once per item rather than once."""
+    assert quantity.anchor is not None  # rejected at load time
     offsets = src.findall(quantity.anchor)
     if not offsets:
         return Explanation(
@@ -150,8 +153,11 @@ def format_explanation(exp: Explanation) -> str:
     """Render an explanation as plain lines for a terminal."""
     out: list[str] = []
     out.append(f"quantity {exp.quantity} ({exp.format}, {exp.spec_source})")
-    anchor = exp.anchor.decode("utf-8", errors="replace")
-    out.append(f"anchor   {anchor!r} occurrence {exp.occurrence}")
+    if exp.anchor is None:
+        out.append("anchor   none, read from the start of the file")
+    else:
+        anchor = exp.anchor.decode("utf-8", errors="replace")
+        out.append(f"anchor   {anchor!r} occurrence {exp.occurrence}")
 
     if not exp.found:
         out.append("found    no")

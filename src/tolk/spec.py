@@ -83,7 +83,9 @@ class Quantity:
     """One named thing a spec knows how to find."""
 
     name: str
-    anchor: bytes
+    # No anchor means the quantity sits at a known place from the start of
+    # the file, which is how formats with a fixed shape and no banner work.
+    anchor: bytes | None = None
     occurrence: str | int = "last"
     block: BlockRule | None = None
     parse: ParseRule = dataclasses.field(default_factory=ParseRule)
@@ -204,13 +206,17 @@ _PARSE_KEYS = frozenset({"type", "unit", "field", "columns", "types", "strip", "
 def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Quantity:
     _reject_unknown(body, _QUANTITY_KEYS, source, where)
     anchor = body.get("anchor")
-    if not isinstance(anchor, str) or not anchor:
-        raise SpecError(f"{source}: {where} needs a non-empty anchor")
+    if anchor is not None and (not isinstance(anchor, str) or not anchor):
+        raise SpecError(f"{source}: {where}.anchor must be a non-empty string")
 
     occurrence = body.get("occurrence", "last")
     if occurrence not in ("first", "last", "all") and not isinstance(occurrence, int):
         raise SpecError(
             f"{source}: {where}.occurrence must be first, last, all, or an integer"
+        )
+    if anchor is None and occurrence == "all":
+        raise SpecError(
+            f"{source}: {where} has no anchor, so there is nothing to repeat over"
         )
 
     block = None
@@ -278,7 +284,7 @@ def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Qu
 
     return Quantity(
         name=name,
-        anchor=anchor.encode(),
+        anchor=None if anchor is None else anchor.encode(),
         occurrence=occurrence,
         block=block,
         parse=parse,

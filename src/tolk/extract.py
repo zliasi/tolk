@@ -35,13 +35,9 @@ def extract_quantity(
     if quantity.repeats:
         return _repeated_value(src, quantity, with_lines=with_lines)
 
-    offset = src.find_nth(quantity.anchor, quantity.nth)
+    offset = _anchor_offset(src, quantity)
     if offset < 0:
-        return Value.missing(
-            quantity.name,
-            f"anchor {quantity.anchor.decode(errors='replace')!r} not found",
-            src.path,
-        )
+        return Value.missing(quantity.name, _not_found(quantity), src.path)
 
     where = Provenance(
         path=src.path,
@@ -54,15 +50,25 @@ def extract_quantity(
     return _scalar_value(src, quantity, where)
 
 
+def _anchor_offset(src: Source, quantity: Quantity) -> int:
+    """Byte the quantity is read from, or -1 when the anchor is absent."""
+    if quantity.anchor is None:
+        return 0
+    return src.find_nth(quantity.anchor, quantity.nth)
+
+
+def _not_found(quantity: Quantity) -> str:
+    anchor = quantity.anchor
+    assert anchor is not None  # only reachable when there is one to miss
+    return f"anchor {anchor.decode(errors='replace')!r} not found"
+
+
 def _repeated_value(src: Source, quantity: Quantity, *, with_lines: bool) -> Value:
     """Read every occurrence of an anchor that prints one line each."""
+    assert quantity.anchor is not None  # rejected at load time
     offsets = src.findall(quantity.anchor)
     if not offsets:
-        return Value.missing(
-            quantity.name,
-            f"anchor {quantity.anchor.decode(errors='replace')!r} not found",
-            src.path,
-        )
+        return Value.missing(quantity.name, _not_found(quantity), src.path)
 
     rule = quantity.parse
     where = Provenance(
