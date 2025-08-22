@@ -201,7 +201,18 @@ _SIGNATURE_KEYS = frozenset({"contains", "extensions", "priority"})
 _TERMINATOR_KEYS = frozenset({"ok", "error"})
 _QUANTITY_KEYS = frozenset({"anchor", "occurrence", "block", "parse", "description"})
 _BLOCK_KEYS = frozenset({"skip", "until", "max_lines"})
-_PARSE_KEYS = frozenset({"type", "unit", "field", "columns", "types", "strip", "table"})
+_PARSE_KEYS = frozenset(
+    {
+        "type",
+        "unit",
+        "field",
+        "columns",
+        "types",
+        "strip",
+        "whole_line",
+        "table",
+    }
+)
 
 
 def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Quantity:
