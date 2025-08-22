@@ -1,0 +1,25 @@
+format = "xyz"
+
+# xyz has no banner, only a shape, so the extension is the only evidence.
+[signature]
+extensions = [".xyz"]
+priority = 10
+
+# Nothing here uses an anchor. The format is positional, so every quantity is
+# addressed by counting lines from the start of the file.
+
+[quantity.natoms]
+description = "atom count on the first line"
+parse = { field = 0, type = "int" }
+
+[quantity.comment]
+description = "free text comment on the second line"
+block = { skip = 1 }
+parse = { whole_line = true, type = "str" }
+
+[quantity.geometry]
+description = "cartesian coordinates"
+block = { skip = 2, until = "blank" }
+parse.columns = { symbol = 0, x = 1, y = 2, z = 3 }
+parse.types = { symbol = "str" }
+parse.unit = "angstrom"
