@@ -116,8 +116,6 @@ def _row(fields: list[bytes], quantity: Quantity) -> dict[str, Any] | None:
 
 def _scalar_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
     rule = quantity.parse
-    if rule.field is None:
-        return Value.missing(quantity.name, "no parse.field for a scalar", src.path)
 
     # A block with a scalar rule means the value sits a few lines below the
     # anchor rather than on it.
@@ -125,15 +123,22 @@ def _scalar_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
     if quantity.block is not None:
         offset = src.advance_lines(offset, quantity.block.skip)
 
-    fields = src.line(offset).split()
-    try:
-        text = fields[rule.field]
-    except IndexError:
-        return Value.missing(
-            quantity.name,
-            f"line has {len(fields)} fields, wanted index {rule.field}",
-            src.path,
-        )
+    if rule.whole_line:
+        # Comments and titles are text with spaces in them, so splitting into
+        # fields would throw away everything after the first word.
+        text = src.line(offset).strip()
+    else:
+        if rule.field is None:
+            return Value.missing(quantity.name, "no parse.field for a scalar", src.path)
+        fields = src.line(offset).split()
+        try:
+            text = fields[rule.field]
+        except IndexError:
+            return Value.missing(
+                quantity.name,
+                f"line has {len(fields)} fields, wanted index {rule.field}",
+                src.path,
+            )
 
     value, error = _convert(text, rule.type, rule.strip)
     if error is not None:

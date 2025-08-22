@@ -146,6 +146,8 @@ def _describe_rule(quantity: Quantity) -> str:
             f"{name}={index}" for name, index in sorted(rule.columns.items())
         )
         return f"columns {columns}"
+    if rule.whole_line:
+        return f"whole line as {rule.type}"
     return f"field {rule.field} as {rule.type}"
 
 

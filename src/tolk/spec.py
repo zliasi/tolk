@@ -63,6 +63,7 @@ class ParseRule:
     columns: dict[str, int] = dataclasses.field(default_factory=dict)
     types: dict[str, str] = dataclasses.field(default_factory=dict)
     strip: str = ""
+    whole_line: bool = False
     table: bool = False
 
     @property
@@ -272,14 +273,16 @@ def _quantity(name: str, body: dict[str, object], source: str, where: str) -> Qu
             columns={str(k): int(v) for k, v in columns.items()},
             types={str(k): str(v) for k, v in types.items()},
             strip=_optional_str(raw_parse, "strip", source, f"{where}.parse") or "",
+            whole_line=bool(raw_parse.get("whole_line", False)),
             table=bool(raw_parse.get("table", False)),
         )
 
     if parse.is_table and block is None and occurrence != "all":
         raise SpecError(f"{source}: {where} reads a table but defines no block")
-    if not parse.is_table and parse.field is None and block is None:
+    if not parse.is_table and parse.field is None and not parse.whole_line:
         raise SpecError(
-            f"{source}: {where} needs parse.field, parse.columns, or a block"
+            f"{source}: {where} needs parse.field, parse.columns, or "
+            "parse.whole_line"
         )
 
     return Quantity(
