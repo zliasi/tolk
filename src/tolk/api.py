@@ -37,6 +37,19 @@ def spec(fmt: str) -> Spec:
     return registry.get(fmt)
 
 
+def describe(fmt: str) -> str:
+    """List what a format's spec knows how to read."""
+    resolved = registry.get(fmt)
+    lines = [f"{resolved.format} ({resolved.source})"]
+    width = max((len(name) for name in resolved.names()), default=0)
+    for name in resolved.names():
+        quantity = resolved.quantities[name]
+        note = quantity.description or "no description"
+        unit = f" [{quantity.parse.unit}]" if quantity.parse.unit else ""
+        lines.append(f"  {name:{width}}  {note}{unit}")
+    return "\n".join(lines)
+
+
 def get(
     path: str | os.PathLike[str],
     quantities: str | list[str],
