@@ -1,5 +1,39 @@
 # changelog
 
+## 0.2.0 - 2025-09-05
+
+Specs and extraction. Still no CLI and no C engine.
+
+- specs are TOML and validated strictly at load time, so a typo names the
+  file and the key instead of silently extracting nothing
+- spec search path: shipped specs first, then ~/.config/tolk/specs, then
+  TOLK_SPECS. A user spec replaces a shipped one of the same name, and
+  Spec.source says which file won
+- quantities address data by anchor, occurrence, block, and parse rule.
+  occurrence is first, last, all, or an index, negative counting from the end
+- occurrence = "all" reads quantities a program prints once per item rather
+  than as a table, one line per excited state
+- blocks skip a header and stop on a blank line, on a literal that begins a
+  line, or after a line count
+- parse rules: field, columns, per column types so a label can sit beside its
+  numbers, strip for punctuation glued onto values, whole_line for text with
+  spaces in it
+- a quantity with no anchor is read from the start of the file, which is how
+  positional formats work
+- values carry provenance, the path and byte offset always, the line number
+  only when asked since counting newlines is the one operation that has to
+  read everything before the offset
+- a missing quantity is a value of None with a reason, never an exception, so
+  a sweep over many files survives the broken ones
+- explain traces an extraction: anchor, byte, line, the matched text, the
+  block it walked, and the value that came out
+- describe lists what a spec can read
+- package API: get, sniff, formats, spec, describe, explain
+- shipped specs: orca, gaussian, xyz
+- specs with a content banner no longer claim a file extension, since ORCA
+  and Gaussian both write .out and only the banner separates them
+- goldens under tests/expected pin the explain output for every fixture
+
 ## 0.1.0 - 2025-08-06
 
 First cut of the byte layer. No specs, no CLI yet.
