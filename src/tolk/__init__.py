@@ -10,6 +10,7 @@ from ._engine import BLANK
 from ._sniff import Signature
 from ._version import __version__
 from .api import describe, explain, formats, get, sniff, spec
+from .check import Status, check, check_many
 from .source import Source, open
 from .spec import SpecError
 from .value import Provenance, Value
@@ -19,9 +20,12 @@ __all__ = [
     "Provenance",
     "Signature",
     "Source",
+    "Status",
     "SpecError",
     "Value",
     "__version__",
+    "check",
+    "check_many",
     "describe",
     "explain",
     "formats",
