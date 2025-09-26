@@ -20,8 +20,49 @@ pip install ./tolk
 
 ## Status
 
-Early. Specs and extraction work, the CLI and the C engine do not exist yet.
-See CHANGELOG.md.
+Early. Specs, extraction, status checking, and the CLI work. The C engine
+does not exist yet, so the pure-Python backend is doing all the work. See
+CHANGELOG.md.
+
+## Command line
+
+```
+tolk get energy,geometry *.out              # extract, csv on stdout
+tolk get energy *.out -t json -o out.json   # or tsv, or a file
+tolk check calcs/*.out --failed             # tail read only, exit 1 if any failed
+tolk scan job.out "SCF Done" --last --text  # offsets, or the matching line
+tolk cat job.out --tail 8192                # or --head, or --lines 40:60
+tolk sniff *.out                            # what format is this
+tolk spec list                              # known formats and their files
+tolk spec show orca                         # what it can read
+tolk spec explain job.out geometry          # why it matched what it matched
+```
+
+`get` takes several files at once and emits one table, so a scalar quantity
+repeats across the rows of a list one:
+
+```
+$ tolk get energy,excitations td.out
+path,energy,state,symmetry,energy_ev,wavelength_nm,fosc
+td.out,-270.962124365,1,Singlet-A,5.0706,244.52,0.0
+td.out,-270.962124365,2,Singlet-A,5.758,215.32,0.0131
+```
+
+A quantity one format defines and another does not is a miss for that file,
+reported on stderr with exit status 1, not the end of the run. Sweeping a
+directory of mixed programs works.
+
+## Status checking
+
+```python
+tolk.check("job.out")        # -> ok | error | running | unknown
+tolk.check_many(paths)
+```
+
+Only the last 8 KB is read, so several hundred files take seconds. Error
+markers are checked before success markers, since a run can print something
+that looks like success and then die. No terminator plus a recent mtime reads
+as running.
 
 ## Reading a file
 

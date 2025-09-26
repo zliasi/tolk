@@ -1,5 +1,30 @@
 # changelog
 
+## 0.3.0 - 2025-09-26
+
+Status checking, the record model, and the CLI.
+
+- check reads only the tail of a file and reports ok, error, running, or
+  unknown. Error markers win over success markers, because a run can print
+  something that looks like success and then die. No terminator plus a recent
+  mtime reads as running
+- record model: everything read becomes a Table and everything written comes
+  from one, so conversion stays one reader plus one writer per format rather
+  than a converter per pair
+- a table carries units and keeps what it did not understand, including the
+  reasons quantities went missing
+- one list valued quantity expands to one row per element with the scalars
+  repeated alongside. Two of them stay separate tables, since zipping would
+  invent a relationship that is not in the file
+- csv, tsv, and json output
+- cli: get, check, scan, cat, sniff, and spec list/show/explain
+- tolk get takes many files and emits one table. A quantity a format does not
+  define is a miss for that file with exit status 1, not a fatal error, so a
+  sweep over mixed programs completes
+- the check module is private as _check, matching engine, sniff, and explain.
+  Public names come from the package root, the modules behind them do not
+  shadow those names
+
 ## 0.2.0 - 2025-09-05
 
 Specs and extraction. Still no CLI and no C engine.
