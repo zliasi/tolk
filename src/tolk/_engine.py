@@ -248,3 +248,17 @@ def line_number(haystack: Haystack, offset: int) -> int:
     so it stays opt in and is only used for provenance and error messages.
     """
     return count(haystack, NEWLINE, 0, line_start(haystack, offset)) + 1
+
+
+# The C backend, when it is present.
+#
+# Everything above this line is the reference implementation and the fallback.
+# Everything below swaps in the compiled equivalents one for one, so an
+# uncompiled checkout behaves identically and only runs slower. Any change to
+# a signature here has to be made on both sides.
+try:  # pragma: no cover - depends on whether the extension was built
+    from ._cengine import install as _install_c_backend
+except ImportError:  # pragma: no cover
+    pass
+else:  # pragma: no cover
+    BACKEND = _install_c_backend(globals())
