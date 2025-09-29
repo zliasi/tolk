@@ -8,3 +8,4 @@ dist/
 *.o
 *.so
 untracked/
+src/tolk/_tolk.c
