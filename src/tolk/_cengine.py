@@ -104,8 +104,25 @@ def iter_find(
 def iter_rfind(
     haystack: Haystack, needle: bytes, start: int = 0, end: int | None = None
 ) -> Iterator[int]:
+    """Every occurrence, right to left.
+
+    This walks backwards rather than reversing a forward scan. The two are
+    not the same for a needle that overlaps itself, since greedy
+    non-overlapping matching depends on which end you start from, and the
+    backward walk is also what makes find_nth(-1) cost the distance from the
+    end rather than the length of the file.
+    """
     _check_needle(needle)
-    return iter(reversed(find_all(haystack, needle, start, end)))
+    step = len(needle)
+    stop = end
+    while True:
+        hit = rfind(haystack, needle, start, stop)
+        if hit < 0:
+            return
+        yield hit
+        if hit <= start:
+            return
+        stop = hit + step - 1
 
 
 def line_start(haystack: Haystack, offset: int) -> int:
