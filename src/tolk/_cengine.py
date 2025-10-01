@@ -77,21 +77,38 @@ def find_nth(
     )
 
 
+# How many offsets to collect per crossing into C. Big enough that most
+# files need one call, small enough that the buffer is nothing.
+_BATCH = 4096
+
+
 def find_all(
     haystack: Haystack, needle: bytes, start: int = 0, end: int | None = None
 ) -> list[int]:
-    """Every occurrence, in one call rather than one call per hit."""
+    """Every occurrence, collected in batches.
+
+    Counting first and then filling an exact array reads the file twice,
+    which made this slower than the pure-Python loop it was meant to replace.
+    Filling a fixed buffer and resuming where it ran out keeps it to one
+    pass.
+    """
     _check_needle(needle)
     buf, size = _buffer(haystack)
     stop = size if end is None else end
-    total = int(lib.tolk_count(buf, size, needle, len(needle), start, stop))
-    if total == 0:
-        return []
-    out = ffi.new("int64_t[]", total)
-    written = int(
-        lib.tolk_find_all(buf, size, needle, len(needle), start, stop, out, total)
-    )
-    return [int(out[i]) for i in range(written)]
+    out = ffi.new("int64_t[]", _BATCH)
+    step = len(needle)
+    offsets: list[int] = []
+    pos = start
+    while True:
+        written = int(
+            lib.tolk_find_all(buf, size, needle, step, pos, stop, out, _BATCH)
+        )
+        if written == 0:
+            return offsets
+        offsets.extend(int(out[i]) for i in range(written))
+        if written < _BATCH:
+            return offsets
+        pos = offsets[-1] + step
 
 
 def iter_find(
