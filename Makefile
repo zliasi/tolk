@@ -1,4 +1,4 @@
-.PHONY: test goldens check
+.PHONY: test goldens check bench engine
 
 test:
 	python3 -m unittest discover -s tests
@@ -6,7 +6,13 @@ test:
 goldens:
 	python3 tests/update-goldens.py
 
-PY_FILES = src/tolk tests
+engine:
+	cd src && python3 tolk/_build_engine.py
+
+bench:
+	python3 bench/bench_engine.py
+
+PY_FILES = src/tolk tests bench
 
 check:
 	black --check $(PY_FILES)
