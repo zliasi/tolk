@@ -241,6 +241,18 @@ def block_span(
     return start, end
 
 
+def scan_columns(
+    haystack: Haystack, start: int, end: int, cols: list[int]
+) -> list[list[float | None]] | None:
+    """Bulk numeric column parse, or None when the backend cannot do it.
+
+    The pure-Python backend declines, because splitting and converting field
+    by field in Python is exactly what the caller already does. Only the C
+    engine implements this, so callers must handle None.
+    """
+    return None
+
+
 def line_number(haystack: Haystack, offset: int) -> int:
     """One based line number of offset.
 

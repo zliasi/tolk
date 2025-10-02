@@ -1,5 +1,6 @@
 #include "tolk.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 /* Clamp a caller supplied range onto the buffer. Out of range offsets are
@@ -230,4 +231,112 @@ tolk_off tolk_advance_lines(const char *buf, tolk_off len, tolk_off offset,
 tolk_off tolk_line_number(const char *buf, tolk_off len, tolk_off offset) {
     tolk_off start = tolk_line_start(buf, len, offset);
     return tolk_count(buf, len, "\n", 1, 0, start) + 1;
+}
+
+/* Longest field this fast path will parse. Numbers in output files are far
+ * shorter than this, and anything longer is not a number worth having. */
+#define TOLK_FIELD_MAX 64
+
+/* Fields on one line, as offsets into the buffer. Output tables are narrow,
+ * so a fixed ceiling avoids allocating per line. */
+#define TOLK_FIELDS_MAX 64
+
+static int is_space(char c) {
+    return c == ' ' || c == '\t' || c == '\r' || c == '\v' || c == '\f';
+}
+
+/* Split [from, to) on whitespace, recording where each field starts and
+ * ends. Returns the field count, capped at TOLK_FIELDS_MAX. */
+static tolk_off split_fields(const char *buf, tolk_off from, tolk_off to,
+                             tolk_off *starts, tolk_off *ends) {
+    tolk_off n = 0;
+    tolk_off pos = from;
+
+    while (pos < to && n < TOLK_FIELDS_MAX) {
+        while (pos < to && is_space(buf[pos])) {
+            pos++;
+        }
+        if (pos >= to) {
+            break;
+        }
+        starts[n] = pos;
+        while (pos < to && !is_space(buf[pos])) {
+            pos++;
+        }
+        ends[n] = pos;
+        n++;
+    }
+    return n;
+}
+
+static double parse_double(const char *buf, tolk_off from, tolk_off to) {
+    char scratch[TOLK_FIELD_MAX + 1];
+    tolk_off n = to - from;
+    char *stop = NULL;
+    double value;
+
+    if (n <= 0 || n > TOLK_FIELD_MAX) {
+        return (double)(0.0 / 0.0);
+    }
+    memcpy(scratch, buf + from, (size_t)n);
+    scratch[n] = '\0';
+    value = strtod(scratch, &stop);
+    /* Anything left over means the field was not a number, not a number
+     * with junk after it. */
+    if (stop != scratch + n) {
+        return (double)(0.0 / 0.0);
+    }
+    return value;
+}
+
+tolk_off tolk_scan_columns(const char *buf, tolk_off len, tolk_off start,
+                           tolk_off end, const tolk_off *cols, tolk_off ncols,
+                           double *out, tolk_off max_rows) {
+    tolk_off starts[TOLK_FIELDS_MAX];
+    tolk_off ends[TOLK_FIELDS_MAX];
+    tolk_off rows = 0;
+    tolk_off pos;
+
+    clamp(len, &start, &end);
+    if (ncols <= 0) {
+        return 0;
+    }
+
+    pos = tolk_line_start(buf, len, start);
+    while (pos <= end && rows < max_rows) {
+        tolk_off stop = tolk_line_end(buf, len, pos);
+        tolk_off nfields;
+        tolk_off nl;
+
+        if (stop > end) {
+            stop = end;
+        }
+        nfields = split_fields(buf, pos, stop, starts, ends);
+        if (nfields > 0) {
+            tolk_off i;
+            for (i = 0; i < ncols; i++) {
+                tolk_off index = cols[i];
+                if (index < 0) {
+                    index += nfields;
+                }
+                if (index < 0 || index >= nfields) {
+                    out[rows * ncols + i] = (double)(0.0 / 0.0);
+                } else {
+                    out[rows * ncols + i] =
+                        parse_double(buf, starts[index], ends[index]);
+                }
+            }
+            rows++;
+        }
+
+        nl = find_in(buf, "\n", 1, stop, len);
+        if (nl == TOLK_NOT_FOUND) {
+            break;
+        }
+        pos = nl + 1;
+        if (pos >= len || pos > end) {
+            break;
+        }
+    }
+    return rows;
 }

@@ -32,6 +32,9 @@ tolk_off tolk_line_end(const char *buf, tolk_off len, tolk_off offset);
 tolk_off tolk_advance_lines(const char *buf, tolk_off len, tolk_off offset,
                             tolk_off n);
 tolk_off tolk_line_number(const char *buf, tolk_off len, tolk_off offset);
+tolk_off tolk_scan_columns(const char *buf, tolk_off len, tolk_off start,
+                           tolk_off end, const tolk_off *cols, tolk_off ncols,
+                           double *out, tolk_off max_rows);
 """
 
 ffibuilder = FFI()

@@ -60,4 +60,20 @@ tolk_off tolk_advance_lines(const char *buf, tolk_off len, tolk_off offset,
  * definition. */
 tolk_off tolk_line_number(const char *buf, tolk_off len, tolk_off offset);
 
+/* Parse numeric columns out of a block of whitespace separated lines.
+ *
+ * Walks [start, end) line by line, splits each line on whitespace, and
+ * writes the requested field indices as doubles into out, row major. A
+ * negative index counts from the right of the line.
+ *
+ * A field that does not parse, or a line too short to hold one, becomes NaN
+ * so the caller can apply its own rule about what counts as data. Lines with
+ * no fields at all are skipped entirely.
+ *
+ * Returns the number of rows written, at most max_rows.
+ */
+tolk_off tolk_scan_columns(const char *buf, tolk_off len, tolk_off start,
+                           tolk_off end, const tolk_off *cols, tolk_off ncols,
+                           double *out, tolk_off max_rows);
+
 #endif /* TOLK_H */

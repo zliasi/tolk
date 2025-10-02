@@ -100,6 +100,42 @@ def _repeated_value(src: Source, quantity: Quantity, *, with_lines: bool) -> Val
     return Value(quantity.name, rows, rule.unit, where)
 
 
+def _fast_rows(
+    src: Source, quantity: Quantity, span: tuple[int, int]
+) -> list[dict[str, Any]] | None:
+    """Bulk parse a block in C, or None when this block does not qualify.
+
+    Only all numeric columns with no stripping go this way. A string column
+    cannot travel as a double, and stripping is a per field decision the bulk
+    parser does not make.
+    """
+    rule = quantity.parse
+    if rule.strip or rule.type == "str":
+        return None
+    if any(rule.column_type(name) == "str" for name in rule.columns):
+        return None
+
+    names = list(rule.columns)
+    parsed = src.scan_columns(span[0], span[1], [rule.columns[name] for name in names])
+    if parsed is None:
+        return None
+
+    want_int = {name: rule.column_type(name) == "int" for name in names}
+    rows: list[dict[str, Any]] = []
+    for values in parsed:
+        row: dict[str, Any] = {}
+        readable = 0
+        for name, value in zip(names, values):
+            if value is None:
+                row[name] = None
+                continue
+            row[name] = int(value) if want_int[name] else value
+            readable += 1
+        if readable:
+            rows.append(row)
+    return rows
+
+
 def _row(fields: list[bytes], quantity: Quantity) -> dict[str, Any] | None:
     """One record from a split line, or None when the line is furniture."""
     rule = quantity.parse

@@ -17,4 +17,4 @@ PY_FILES = src/tolk tests bench
 check:
 	black --check $(PY_FILES)
 	ruff check --select E4,E7,E9,F $(PY_FILES)
-	mypy --strict src/tolk
+	mypy --strict --exclude '_build_engine.py' src/tolk

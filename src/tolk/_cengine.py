@@ -199,4 +199,64 @@ def install(namespace: dict[str, Any]) -> str:
     for name in REPLACES:
         namespace[name] = here[name]
     namespace["find_all"] = find_all
+    namespace["scan_columns"] = scan_columns
     return "c"
+
+
+# Rows collected per crossing into C when a block's length is unknown.
+_ROWS = 4096
+
+
+def scan_columns(
+    haystack: Haystack, start: int, end: int, cols: list[int]
+) -> list[list[float | None]]:
+    """Parse numeric columns out of a block in one call.
+
+    This is the fast path for tables. Doing it field by field means a Python
+    float() call per cell, which dominates everything else when a block runs
+    to thousands of rows. Here the whole block is split and converted in C
+    and only the finished numbers cross back.
+
+    Unparseable fields come back as None, so the caller keeps its own rule
+    about which rows count as data.
+    """
+    buf, size = _buffer(haystack)
+    ncols = len(cols)
+    if ncols == 0:
+        return []
+    col_array = ffi.new("int64_t[]", cols)
+    out = ffi.new("double[]", _ROWS * ncols)
+
+    rows: list[list[float | None]] = []
+    pos = start
+    while True:
+        written = int(
+            lib.tolk_scan_columns(buf, size, pos, end, col_array, ncols, out, _ROWS)
+        )
+        if written == 0:
+            return rows
+        flat = ffi.unpack(out, written * ncols)
+        for r in range(written):
+            row = flat[r * ncols : (r + 1) * ncols]
+            rows.append([None if v != v else v for v in row])
+        if written < _ROWS:
+            return rows
+        # Resume after the last line consumed. Walking forward from the end
+        # of the buffer we filled is the only way to know where that was.
+        pos = _resume(haystack, pos, written)
+
+
+def _resume(haystack: Haystack, pos: int, rows: int) -> int:
+    """Start of the line after the rows already collected."""
+    buf, size = _buffer(haystack)
+    at = pos
+    taken = 0
+    while taken < rows:
+        line_to = int(lib.tolk_line_end(buf, size, at))
+        nxt = int(lib.tolk_find(buf, size, b"\n", 1, line_to, size))
+        if nxt < 0:
+            return size
+        if line_to > at:
+            taken += 1
+        at = nxt + 1
+    return at
