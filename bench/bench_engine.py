@@ -18,7 +18,9 @@ import os
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src")
+)
 
 from tolk import _engine  # noqa: E402
 
@@ -65,7 +67,11 @@ def run(module: object, data: bytes, repeat: int) -> list[tuple[str, float, obje
         timed("nth -1", lambda: module.find_nth(data, ANCHOR, -1), repeat),
         timed("count", lambda: module.count(data, ANCHOR), repeat),
         timed("find all", lambda: list(module.iter_find(data, ANCHOR)), repeat),
-        timed("line number at end", lambda: module.line_number(data, len(data) - 1), repeat),
+        timed(
+            "line number at end",
+            lambda: module.line_number(data, len(data) - 1),
+            repeat,
+        ),
         timed(
             "line span at end",
             lambda: module.line_span(data, len(data) - 100),
