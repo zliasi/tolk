@@ -20,9 +20,41 @@ pip install ./tolk
 
 ## Status
 
-Early. Specs, extraction, status checking, and the CLI work. The C engine
-does not exist yet, so the pure-Python backend is doing all the work. See
-CHANGELOG.md.
+Early. Specs, extraction, status checking, the CLI, and the C engine work.
+Batch, convert, and templates do not. See CHANGELOG.md.
+
+## The C engine
+
+Optional. Build it with:
+
+```
+make engine
+```
+
+Without it the pure-Python backend takes over at the same interface, and
+everything behaves identically. `tolk._engine.BACKEND` says which is live,
+and the parity tests run the same inputs through both.
+
+What it is worth, measured rather than assumed:
+
+```
+operation              python          c   speedup
+find first              0.00ms      0.00ms      1.1x
+find last               0.00ms      0.00ms      0.4x
+count                  14.25ms     12.53ms      1.1x
+line number at end    329.33ms     15.22ms     21.6x
+table, 100k rows      249.98ms    151.15ms      1.7x
+```
+
+The honest summary is that plain literal search gains nothing, because
+`bytes.find` is already C and the call into cffi costs more than it saves.
+The engine earns its place where the Python version has to loop per byte or
+per field: line numbering, and bulk numeric column parsing for tables.
+
+That measurement also killed a planned feature. The design called for a
+Teddy-style multi-literal scan so that N anchors would cost one traversal.
+The benchmark says N separate `memchr`-prefiltered passes are already fast
+enough that the extra machinery would not pay for itself, so it is not there.
 
 ## Command line
 
