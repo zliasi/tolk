@@ -1,5 +1,42 @@
 # changelog
 
+## 0.4.0 - 2025-10-24
+
+The C engine, behind the same interface.
+
+- csrc holds a small format agnostic engine: literal search forward and
+  backward, count, all occurrences, nth with negative indexing, line
+  boundaries, line advance, and line numbering
+- forward search is memchr on the first byte then memcmp to confirm, so most
+  of a buffer is rejected at memory bandwidth
+- built with cffi via make engine. When it is not built the pure-Python
+  backend keeps running at the same interface and nothing above the boundary
+  changes. _engine.BACKEND says which is live
+- parity tests run the same inputs through both backends, including every
+  fixture, and skip the C half when it is not built
+- bulk numeric column parsing: a whole block is split and converted in C and
+  only finished numbers cross back, instead of one float() per cell. Used
+  only when every requested column is numeric and nothing is being stripped,
+  since a string column cannot travel as a double
+- benchmarks for both the search primitives and the table path
+
+Measured rather than assumed, and the results are mixed on purpose. Literal
+search gains nothing, because bytes.find is already C and the cffi call costs
+more than it saves. The wins are line numbering, 21x, and bulk table parsing,
+1.7x. The planned Teddy style multi-literal scan was dropped: the benchmark
+says separate prefiltered passes are already fast enough that it would not
+pay for itself.
+
+Two bugs the parity tests caught:
+
+- the C backward iterator reversed a forward scan, which differs from a true
+  backward walk for a needle that overlaps itself, and would also have made
+  find_nth(-1) cost the length of the file rather than the distance from the
+  end
+- collecting all offsets counted the file first and then filled an exact
+  array, reading it twice and coming out slower than the Python loop it
+  replaced
+
 ## 0.3.0 - 2025-09-26
 
 Status checking, the record model, and the CLI.
