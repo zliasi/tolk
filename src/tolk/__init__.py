@@ -11,6 +11,7 @@ from ._sniff import Signature
 from ._version import __version__
 from .api import describe, explain, formats, get, sniff, spec
 from ._check import Status, check
+from . import cache
 from .batch import Sweep, check_many, get_many, map_files
 from .source import Source, open
 from .spec import SpecError
@@ -26,6 +27,7 @@ __all__ = [
     "SpecError",
     "Value",
     "__version__",
+    "cache",
     "check",
     "check_many",
     "describe",

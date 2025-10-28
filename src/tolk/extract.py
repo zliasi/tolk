@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import _engine
+from . import _engine, cache
 from .source import Source
 from .spec import Quantity, Spec
 from .value import Provenance, Value
@@ -54,7 +54,16 @@ def _anchor_offset(src: Source, quantity: Quantity) -> int:
     """Byte the quantity is read from, or -1 when the anchor is absent."""
     if quantity.anchor is None:
         return 0
-    return src.find_nth(quantity.anchor, quantity.nth)
+    store = cache.active()
+    if store is None:
+        return src.find_nth(quantity.anchor, quantity.nth)
+
+    remembered = store.lookup(src, quantity.anchor, quantity.occurrence)
+    if remembered is not None:
+        return remembered
+    offset = src.find_nth(quantity.anchor, quantity.nth)
+    store.store(src, quantity.anchor, quantity.occurrence, offset)
+    return offset
 
 
 def _not_found(quantity: Quantity) -> str:
