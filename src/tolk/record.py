@@ -15,6 +15,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import _engine
 from .value import Value
 
 
@@ -108,12 +109,39 @@ class Table:
         columns = self.columns
         if not columns:
             return ""
-        out = [delimiter.join(_quote(c, delimiter) for c in columns)]
+        header = delimiter.join(_quote(c, delimiter) for c in columns)
+
+        body = self._fast_body(columns, delimiter)
+        if body is not None:
+            return header + "\n" + body
+
+        out = [header]
         for row in self.rows:
             out.append(
                 delimiter.join(_quote(_cell(row.get(c)), delimiter) for c in columns)
             )
         return "\n".join(out) + "\n"
+
+    def _fast_body(self, columns: list[str], delimiter: str) -> str | None:
+        """Format the body in C, or None when that would be wrong.
+
+        The C writer emits fields as they are, so it can only be used when
+        nothing needs quoting. Any text cell falls back to Python rather than
+        risk a delimiter inside a value silently splitting a row.
+        """
+        cells = []
+        for row in self.rows:
+            values = [row.get(name) for name in columns]
+            if any(
+                value is not None and not isinstance(value, (int, float))
+                for value in values
+            ):
+                return None
+            cells.append(values)
+        raw = _engine.write_rows(cells, delimiter)
+        if raw is None:
+            return None
+        return raw.decode("ascii")
 
     def to_tsv(self) -> str:
         return self.to_csv(delimiter="\t")

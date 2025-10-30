@@ -1,5 +1,6 @@
 #include "tolk.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -339,4 +340,71 @@ tolk_off tolk_scan_columns(const char *buf, tolk_off len, tolk_off start,
         }
     }
     return rows;
+}
+
+tolk_off tolk_write_bytes(char *out, tolk_off cap, tolk_off at,
+                          const char *src, tolk_off n) {
+    if (at < 0 || n < 0 || at + n > cap) {
+        return TOLK_NOT_FOUND;
+    }
+    memcpy(out + at, src, (size_t)n);
+    return at + n;
+}
+
+tolk_off tolk_write_int(char *out, tolk_off cap, tolk_off at, int64_t value) {
+    char scratch[24];
+    int n = 0;
+    int i;
+    uint64_t magnitude;
+    int negative = value < 0;
+
+    /* Negating the most negative value overflows, so the magnitude is taken
+     * in unsigned arithmetic where it is representable. */
+    magnitude = negative ? (uint64_t)0 - (uint64_t)value : (uint64_t)value;
+    do {
+        scratch[n++] = (char)('0' + (magnitude % 10));
+        magnitude /= 10;
+    } while (magnitude > 0);
+    if (negative) {
+        scratch[n++] = '-';
+    }
+    if (at < 0 || at + n > cap) {
+        return TOLK_NOT_FOUND;
+    }
+    for (i = 0; i < n; i++) {
+        out[at + i] = scratch[n - 1 - i];
+    }
+    return at + n;
+}
+
+tolk_off tolk_write_double(char *out, tolk_off cap, tolk_off at, double value,
+                           int precision) {
+    char scratch[64];
+    int n;
+
+    if (precision <= 0 || precision > 17) {
+        /* Shortest form that still reads back as the same double. Trying
+         * 15 then 16 then 17 is what makes 1e-9 print as 1e-09 rather than
+         * 1.0000000000000001e-09, while never losing a bit. */
+        int p;
+        for (p = 15; p < 17; p++) {
+            n = snprintf(scratch, sizeof(scratch), "%.*g", p, value);
+            if (n > 0 && (size_t)n < sizeof(scratch) &&
+                strtod(scratch, NULL) == value) {
+                goto written;
+            }
+        }
+        precision = 17;
+    }
+    n = snprintf(scratch, sizeof(scratch), "%.*g", precision, value);
+
+written:
+    if (n < 0 || (size_t)n >= sizeof(scratch)) {
+        return TOLK_NOT_FOUND;
+    }
+    if (at < 0 || at + n > cap) {
+        return TOLK_NOT_FOUND;
+    }
+    memcpy(out + at, scratch, (size_t)n);
+    return at + n;
 }

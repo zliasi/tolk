@@ -253,6 +253,18 @@ def scan_columns(
     return None
 
 
+def write_rows(
+    rows: list[list[object]], delimiter: str = ",", precision: int = 17
+) -> bytes | None:
+    """Bulk row formatting, or None when the backend cannot do it.
+
+    Only the C engine implements this. The pure-Python backend declines and
+    the caller falls back to its own join, which is what it would have done
+    anyway.
+    """
+    return None
+
+
 def line_number(haystack: Haystack, offset: int) -> int:
     """One based line number of offset.
 

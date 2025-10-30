@@ -35,6 +35,11 @@ tolk_off tolk_line_number(const char *buf, tolk_off len, tolk_off offset);
 tolk_off tolk_scan_columns(const char *buf, tolk_off len, tolk_off start,
                            tolk_off end, const tolk_off *cols, tolk_off ncols,
                            double *out, tolk_off max_rows);
+tolk_off tolk_write_bytes(char *out, tolk_off cap, tolk_off at,
+                          const char *src, tolk_off n);
+tolk_off tolk_write_int(char *out, tolk_off cap, tolk_off at, int64_t value);
+tolk_off tolk_write_double(char *out, tolk_off cap, tolk_off at, double value,
+                           int precision);
 """
 
 ffibuilder = FFI()

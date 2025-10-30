@@ -76,4 +76,19 @@ tolk_off tolk_scan_columns(const char *buf, tolk_off len, tolk_off start,
                            tolk_off end, const tolk_off *cols, tolk_off ncols,
                            double *out, tolk_off max_rows);
 
+/* Buffered writer.
+ *
+ * Formatting numbers with snprintf in a loop dominates writing a table, so
+ * this keeps one arena and appends into it with the smallest conversion that
+ * will do. The caller owns the buffer and its size; nothing here allocates.
+ *
+ * Every function returns the new write position, or -1 when the buffer is
+ * full. A caller that hits -1 grows its buffer and starts the row again.
+ */
+tolk_off tolk_write_bytes(char *out, tolk_off cap, tolk_off at,
+                          const char *src, tolk_off n);
+tolk_off tolk_write_int(char *out, tolk_off cap, tolk_off at, int64_t value);
+tolk_off tolk_write_double(char *out, tolk_off cap, tolk_off at, double value,
+                           int precision);
+
 #endif /* TOLK_H */

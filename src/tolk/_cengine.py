@@ -200,6 +200,7 @@ def install(namespace: dict[str, Any]) -> str:
         namespace[name] = here[name]
     namespace["find_all"] = find_all
     namespace["scan_columns"] = scan_columns
+    namespace["write_rows"] = write_rows
     return "c"
 
 
@@ -260,3 +261,60 @@ def _resume(haystack: Haystack, pos: int, rows: int) -> int:
             taken += 1
         at = nxt + 1
     return at
+
+
+# Starting arena size. Rows are short, so this covers a few thousand of them
+# before the buffer has to grow.
+_ARENA = 1 << 16
+
+
+def write_rows(
+    rows: list[list[object]], delimiter: str = ",", precision: int = 17
+) -> bytes:
+    """Format a table of scalars straight into bytes.
+
+    Building the same output in Python means a str() per cell and a join over
+    the lot. Here the numbers are converted in C into one arena and the whole
+    thing comes back as a single bytes object.
+    """
+    sep = delimiter.encode()
+    newline = b"\n"
+    cap = _ARENA
+    while True:
+        out = ffi.new("char[]", cap)
+        at = 0
+        overflow = False
+        for row in rows:
+            for index, cell in enumerate(row):
+                if index:
+                    at = int(lib.tolk_write_bytes(out, cap, at, sep, len(sep)))
+                    if at < 0:
+                        overflow = True
+                        break
+                at = _write_cell(out, cap, at, cell)
+                if at < 0:
+                    overflow = True
+                    break
+            if overflow:
+                break
+            at = int(lib.tolk_write_bytes(out, cap, at, newline, 1))
+            if at < 0:
+                overflow = True
+                break
+        if not overflow:
+            return bytes(ffi.buffer(out, at))
+        cap *= 2
+
+
+def _write_cell(out: Any, cap: int, at: int, cell: object) -> int:
+    if cell is None:
+        return at
+    if isinstance(cell, bool):
+        text = b"true" if cell else b"false"
+        return int(lib.tolk_write_bytes(out, cap, at, text, len(text)))
+    if isinstance(cell, int):
+        return int(lib.tolk_write_int(out, cap, at, cell))
+    if isinstance(cell, float):
+        return int(lib.tolk_write_double(out, cap, at, cell, 0))
+    text = str(cell).encode()
+    return int(lib.tolk_write_bytes(out, cap, at, text, len(text)))
