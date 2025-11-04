@@ -146,6 +146,36 @@ class Table:
     def to_tsv(self) -> str:
         return self.to_csv(delimiter="\t")
 
+    def to_columns(self) -> dict[str, list[Any]]:
+        """Column oriented view, one list per column.
+
+        This is the shape every dataframe library wants, and building it here
+        means tolk never has to depend on one.
+        """
+        columns = self.columns
+        return {name: [row.get(name) for row in self.rows] for name in columns}
+
+    def to_arrow(self) -> Any:
+        """Hand the table to pyarrow, if it is installed.
+
+        tolk does not depend on Arrow and never will. This is a handoff, so
+        that polars, pandas, and duckdb can take the data without tolk
+        growing a dataframe of its own.
+        """
+        try:
+            import pyarrow  # type: ignore[import-not-found]
+        except ImportError:  # pragma: no cover - optional
+            raise ImportError(
+                "to_arrow needs pyarrow installed, or use to_columns and "
+                "build the frame yourself"
+            ) from None
+        table = pyarrow.table(self.to_columns())
+        if self.units:
+            table = table.replace_schema_metadata(
+                {f"unit:{name}": unit for name, unit in self.units.items()}
+            )
+        return table
+
 
 def _as_rows(name: str, values: list[Any]) -> list[dict[str, Any]]:
     """Normalise a list valued quantity into rows."""

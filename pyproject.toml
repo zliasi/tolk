@@ -16,6 +16,8 @@ dynamic = ["version"]
 # The C engine is optional. Without it tolk falls back to a pure-Python
 # backend with the same interface, so an uncompiled checkout still works.
 speed = ["cffi>=1.16"]
+# Only for Table.to_arrow. tolk never imports it otherwise.
+arrow = ["pyarrow>=15"]
 
 [project.scripts]
 tolk = "tolk.cli:main"
