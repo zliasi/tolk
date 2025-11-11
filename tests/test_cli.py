@@ -75,11 +75,14 @@ class CliTest(unittest.TestCase):
             with open(target, encoding="utf-8") as handle:
                 self.assertIn("energy", handle.read())
 
-    def test_get_refuses_an_undetectable_format(self) -> None:
+    def test_an_undetectable_file_does_not_stop_the_others(self) -> None:
+        # A sweep reports the file it could not read and keeps going, rather
+        # than aborting on the first stray thing in a directory.
         licence = os.path.join(os.path.dirname(__file__), "..", "LICENSE")
-        code, _, err = run("get", "energy", licence)
-        self.assertEqual(code, 2)
+        code, out, err = run("get", "energy", licence, OPT)
+        self.assertEqual(code, 1)
         self.assertIn("could not detect", err)
+        self.assertIn("-270.965189516826", out)
 
     def test_check_reports_each_file(self) -> None:
         code, out, _ = run("check", OPT, FREQ)
