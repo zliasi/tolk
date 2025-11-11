@@ -11,13 +11,11 @@ import argparse
 import sys
 from collections.abc import Sequence
 
-from . import _check, _explain, _sniff, registry
+from . import _check, _explain, _sniff, batch, cache, registry
 from ._version import __version__
-from .extract import extract
 from .record import Table
 from .source import Source
 from .spec import Spec, SpecError
-from .value import Value
 
 FORMATS = ("csv", "tsv", "json")
 
@@ -54,6 +52,8 @@ def _parser() -> argparse.ArgumentParser:
     get.add_argument(
         "--lines", action="store_true", help="include line numbers in provenance"
     )
+    get.add_argument("-j", "--jobs", type=int, help="threads for many files")
+    get.add_argument("--cache", action="store_true", help="remember anchor offsets")
     get.set_defaults(run=_run_get)
 
     check = subs.add_parser("check", help="report how runs ended")
@@ -61,6 +61,7 @@ def _parser() -> argparse.ArgumentParser:
     check.add_argument("-f", "--format")
     check.add_argument("--failed", action="store_true", help="list only what is not ok")
     check.add_argument("-t", "--to", choices=FORMATS, help="machine readable output")
+    check.add_argument("-j", "--jobs", type=int, help="threads for many files")
     check.set_defaults(run=_run_check)
 
     scan = subs.add_parser("scan", help="locate a literal and print offsets")
@@ -120,38 +121,29 @@ def _run_get(args: argparse.Namespace) -> int:
         print("tolk: no quantities given", file=sys.stderr)
         return 2
 
-    rows: list[dict[str, object]] = []
-    units: dict[str, str] = {}
-    missing: dict[str, str] = {}
-    status = 0
+    if args.cache:
+        cache.enable()
 
-    for path in args.files:
-        # A sweep can cover several programs at once, so a quantity one of
-        # them does not define is a miss for that file rather than the end
-        # of the run.
-        with Source(path) as src:
-            spec = _resolve(src, args.format)
-            values = {}
-            for name in names:
-                try:
-                    values[name] = extract(src, spec, name, with_lines=args.lines)
-                except SpecError as exc:
-                    values[name] = Value.missing(name, str(exc), path)
-        table = Table.from_values(values, path=path)
-        rows.extend(table.rows)
-        units.update(table.units)
-        for name, reason in table.meta.get("missing", {}).items():
-            missing[f"{path}:{name}"] = reason
-            status = 1
+    try:
+        sweep = batch.get_many(
+            list(args.files),
+            names,
+            format=args.format,
+            with_lines=args.lines,
+            workers=args.jobs,
+        )
+    finally:
+        if args.cache:
+            cache.disable()
 
-    _emit(Table(rows=rows, units=units), args.to, args.output)
-    for where, reason in missing.items():
+    _emit(sweep.table, args.to, args.output)
+    for where, reason in sorted(sweep.errors.items()):
         print(f"tolk: {where}: {reason}", file=sys.stderr)
-    return status
+    return 1 if sweep.errors else 0
 
 
 def _run_check(args: argparse.Namespace) -> int:
-    statuses = [_check.check(path, format=args.format) for path in args.files]
+    statuses = batch.check_many(list(args.files), format=args.format, workers=args.jobs)
     if args.failed:
         statuses = [status for status in statuses if not status.ok]
 
