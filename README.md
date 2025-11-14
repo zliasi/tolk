@@ -84,6 +84,30 @@ A quantity one format defines and another does not is a miss for that file,
 reported on stderr with exit status 1, not the end of the run. Sweeping a
 directory of mixed programs works.
 
+## Sweeps
+
+```python
+sweep = tolk.get_many(paths, ["energy", "geometry"])
+sweep.table.to_csv()
+sweep.table.to_columns()      # one list per column, for any dataframe
+sweep.table.to_arrow()        # needs pyarrow, which tolk never depends on
+sweep.errors                  # what went wrong, per file and per quantity
+```
+
+Files are opened on a small thread pool. The gain is on the IO side, since
+Python bytecode still serialises, and it is real but bounded. A file that
+cannot be read is recorded in `errors` and the sweep continues.
+
+Anchor offsets can be remembered between runs:
+
+```
+tolk get energy calcs/*.out --cache
+```
+
+Every hit is verified by checking that the anchor really is at the remembered
+offset before it is used, since a stale entry would be a wrong number rather
+than a slow one.
+
 ## Status checking
 
 ```python

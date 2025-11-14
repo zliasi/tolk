@@ -1,5 +1,35 @@
 # changelog
 
+## 0.5.0 - 2025-11-14
+
+Sweeps, caching, and bulk writing.
+
+- get_many and check_many run over a thread pool. The engine holds no mutable
+  global state so this is safe, and the gain is on the IO side since Python
+  bytecode still serialises
+- a sweep survives its casualties. An unreadable file, an undetectable
+  format, or a quantity a format does not define is recorded per file and the
+  rest still comes back
+- offset cache, off by default, enabled with tolk.cache.enable() or
+  tolk get --cache. Keyed by absolute path, size, and mtime, and every hit is
+  verified against the file before it is used, because a stale offset would
+  be a silently wrong number rather than a slow one
+- C arena writer for numeric rows, with shortest round trip float formatting.
+  It tries 15 then 16 then 17 significant digits and keeps the first that
+  reads back identical, so 1e-9 prints as 1e-09 rather than
+  1.0000000000000001e-09
+- the CSV body goes through the writer only when every cell is numeric, since
+  the C path emits fields as they are and a delimiter inside a text value
+  would split a row
+- Table.to_columns gives a column oriented view, and Table.to_arrow hands off
+  to pyarrow when it is installed. tolk does not depend on Arrow and will not
+- cli: -j/--jobs on get and check, --cache on get
+
+One deliberate behaviour change. tolk get on a file whose format cannot be
+detected now exits 1 with the reason on stderr and still emits everything it
+could read, instead of exiting 2 with nothing. A stray file in a directory
+should not cost you the other four hundred.
+
 ## 0.4.0 - 2025-10-24
 
 The C engine, behind the same interface.
