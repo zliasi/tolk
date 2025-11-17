@@ -1,0 +1,28 @@
+name = "obabel"
+description = "Open Babel, for chemistry structure formats tolk does not write itself"
+
+# Detection is the executable name. tolk only checks that it is on PATH,
+# it does not ask for a version.
+detect = "obabel"
+
+priority = 10
+
+# Open Babel reads and writes far more than this, but tolk only routes what
+# it cannot do natively. Anything to or from a structure format goes here.
+pairs = [
+    ["*", "pdb"],
+    ["*", "mol"],
+    ["*", "mol2"],
+    ["*", "sdf"],
+    ["*", "smi"],
+    ["*", "cif"],
+    ["*", "inchi"],
+    ["pdb", "*"],
+    ["mol", "*"],
+    ["mol2", "*"],
+    ["sdf", "*"],
+    ["smi", "*"],
+    ["cif", "*"],
+]
+
+command = "obabel -i {ifmt} {input} -o {ofmt} -O {output}"
