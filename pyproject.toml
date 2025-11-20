@@ -29,7 +29,12 @@ version = { attr = "tolk._version.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-tolk = ["py.typed", "specs/*/*.toml"]
+tolk = [
+    "py.typed",
+    "specs/*/*.toml",
+    "backends/*.toml",
+    "templates/*",
+]
 
 [tool.black]
 line-length = 88

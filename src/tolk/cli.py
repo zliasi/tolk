@@ -11,7 +11,8 @@ import argparse
 import sys
 from collections.abc import Sequence
 
-from . import _check, _explain, _sniff, batch, cache, registry
+from . import _check, _explain, _sniff, backends, batch, cache, convert, registry
+from . import template
 from ._version import __version__
 from .record import Table
 from .source import Source
@@ -78,6 +79,26 @@ def _parser() -> argparse.ArgumentParser:
     cat.add_argument("--tail", type=int, metavar="BYTES")
     cat.add_argument("--lines", metavar="A:B", help="line range, 1 based, inclusive")
     cat.set_defaults(run=_run_cat)
+
+    conv = subs.add_parser("convert", help="convert a file to another format")
+    conv.add_argument("source")
+    conv.add_argument("target")
+    conv.add_argument("-f", "--format", help="force the input format")
+    conv.add_argument("-q", "--quantities", help="comma separated, default all")
+    conv.add_argument("--explain", action="store_true", help="say how, and do nothing")
+    conv.set_defaults(run=_run_convert)
+
+    write = subs.add_parser("write", help="render an input template")
+    write.add_argument("template", nargs="?")
+    write.add_argument("output", nargs="?", help="default stdout")
+    write.add_argument(
+        "--set", dest="settings", action="append", default=[], metavar="K=V"
+    )
+    write.add_argument("--list", action="store_true", help="list templates")
+    write.set_defaults(run=_run_write)
+
+    backend = subs.add_parser("backends", help="list conversion backends")
+    backend.set_defaults(run=_run_backends)
 
     sniff = subs.add_parser("sniff", help="name the format of files")
     sniff.add_argument("files", nargs="+")
@@ -211,6 +232,63 @@ def _run_cat(args: argparse.Namespace) -> int:
         else:
             data = src.read()
         sys.stdout.write(data.decode("utf-8", errors="replace"))
+    return 0
+
+
+def _run_convert(args: argparse.Namespace) -> int:
+    names = (
+        [n.strip() for n in args.quantities.split(",") if n.strip()]
+        if args.quantities
+        else None
+    )
+    try:
+        if args.explain:
+            print(convert.plan(args.source, args.target, format=args.format))
+            return 0
+        done = convert.convert(
+            args.source, args.target, format=args.format, quantities=names
+        )
+    except (convert.ConvertError, backends.BackendError) as exc:
+        print(f"tolk: {exc}", file=sys.stderr)
+        return 2
+    print(f"{done.source} -> {done.target} via {done.how}", file=sys.stderr)
+    return 0
+
+
+def _run_write(args: argparse.Namespace) -> int:
+    if args.list:
+        for name in template.names():
+            print(name)
+        return 0
+    if not args.template:
+        print("tolk: give a template name, or --list", file=sys.stderr)
+        return 2
+    try:
+        rendered = template.get(args.template).render(
+            template.parse_settings(args.settings)
+        )
+    except template.TemplateError as exc:
+        print(f"tolk: {exc}", file=sys.stderr)
+        return 2
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as handle:
+            handle.write(rendered)
+    else:
+        sys.stdout.write(rendered)
+    return 0
+
+
+def _run_backends(args: argparse.Namespace) -> int:
+    found = backends.load_all()
+    if not found:
+        print("tolk: no backends found", file=sys.stderr)
+        return 1
+    width = max(len(name) for name in found)
+    for name in sorted(found):
+        entry = found[name]
+        state = "installed" if entry.available() else "missing"
+        print(f"{name:{width}}  {state:9s}  {entry.source}")
+    print(f"native writers: {', '.join(convert.writers())}")
     return 0
 
 

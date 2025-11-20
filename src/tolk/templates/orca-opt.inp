@@ -1,0 +1,6 @@
+! {method} {basis} Opt
+
+%pal nprocs {nprocs} end
+%maxcore {maxcore}
+
+* xyzfile {charge} {mult} {geometry}
