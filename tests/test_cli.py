@@ -159,6 +159,67 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("[hartree]", out)
 
+    def test_convert_explain_writes_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "geom.xyz")
+            code, out, _ = run("convert", OPT, target, "--explain")
+            self.assertEqual(code, 0)
+            self.assertIn("orca -> xyz via tolk", out)
+            self.assertFalse(os.path.exists(target))
+
+    def test_convert_writes_xyz(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "geom.xyz")
+            code, _, err = run("convert", OPT, target, "-q", "geometry")
+            self.assertEqual(code, 0)
+            self.assertIn("via tolk", err)
+            with open(target, encoding="utf-8") as handle:
+                self.assertEqual(handle.readline().strip(), "15")
+
+    def test_convert_refuses_an_impossible_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            code, _, err = run("convert", OPT, os.path.join(tmp, "x.zzz"))
+            self.assertEqual(code, 2)
+            self.assertIn("tolk writes", err)
+
+    def test_backends_lists_availability(self) -> None:
+        code, out, _ = run("backends")
+        self.assertEqual(code, 0)
+        self.assertIn("obabel", out)
+        self.assertIn("native writers", out)
+
+    def test_write_lists_templates(self) -> None:
+        code, out, _ = run("write", "--list")
+        self.assertEqual(code, 0)
+        self.assertIn("orca-opt", out)
+
+    def test_write_renders(self) -> None:
+        code, out, _ = run(
+            "write",
+            "orca-opt",
+            "--set",
+            "method=PBE0",
+            "--set",
+            "basis=def2-SVP",
+            "--set",
+            "nprocs=4",
+            "--set",
+            "maxcore=2000",
+            "--set",
+            "charge=0",
+            "--set",
+            "mult=1",
+            "--set",
+            "geometry=mol.xyz",
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("! PBE0 def2-SVP Opt", out)
+
+    def test_write_refuses_a_missing_value(self) -> None:
+        code, _, err = run("write", "orca-opt", "--set", "method=PBE0")
+        self.assertEqual(code, 2)
+        self.assertIn("no value for", err)
+
     def test_spec_explain(self) -> None:
         code, out, _ = run("spec", "explain", OPT, "geometry")
         self.assertEqual(code, 0)
