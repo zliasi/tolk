@@ -1,5 +1,25 @@
 # changelog
 
+## 0.6.0 - 2025-11-28
+
+Conversion, backends, and templates.
+
+- conversion goes through the record model, so a format costs one reader or
+  one writer rather than a converter against every other format
+- native writers for csv, tsv, json, and xyz
+- external backends are declared in TOML: how to detect the tool, which
+  format pairs it claims, and the command to run. Commands are executed as a
+  list, never through a shell
+- only Open Babel ships. Others go in ~/.config/tolk/backends/ or TOLK_BACKENDS
+- conversion refuses rather than guesses. Writing xyz from a table without
+  symbol, x, y and z columns is an error, and an unroutable pair says what
+  tolk can write and which backend would have handled it
+- convert --explain reports the plan and writes nothing
+- input templates, text with {placeholders}. A missing value is an error, not
+  a blank, because a job that runs with an empty basis set wastes more time
+  than one that never starts
+- cli: convert, write, backends
+
 ## 0.5.0 - 2025-11-14
 
 Sweeps, caching, and bulk writing.

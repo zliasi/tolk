@@ -108,6 +108,47 @@ Every hit is verified by checking that the anchor really is at the remembered
 offset before it is used, since a stale entry would be a wrong number rather
 than a slow one.
 
+## Converting
+
+Everything goes through the record model, so a format costs one reader or one
+writer, never a converter against every other format.
+
+```
+tolk convert job.out geom.xyz -q geometry
+tolk convert td.out states.csv -q excitations
+tolk convert job.out mol.pdb --explain     # say how, do nothing
+tolk backends                              # what is installed
+```
+
+tolk writes csv, tsv, json, and xyz itself. Anything else goes to a declared
+backend, and a backend is a TOML file rather than code:
+
+```toml
+name = "obabel"
+detect = "obabel"
+pairs = [["*", "pdb"], ["*", "mol2"], ["pdb", "*"]]
+command = "obabel -i {ifmt} {input} -o {ofmt} -O {output}"
+```
+
+Only Open Babel ships. Put your own in `~/.config/tolk/backends/`. The
+command is run as a list, never through a shell.
+
+Conversion refuses rather than guesses. Writing xyz from a table with no
+`symbol`, `x`, `y`, `z` columns is an error, because picking which numeric
+columns are coordinates is the kind of inference that makes a converter
+untrustworthy.
+
+## Templates
+
+```
+tolk write --list
+tolk write orca-opt job.inp --set method=PBE0 --set basis=def2-TZVP
+```
+
+Deliberately dumb: text with `{placeholders}` and nothing else. A placeholder
+with no value is an error rather than an empty string, since a job that runs
+with a blank basis set wastes more time than one that never starts.
+
 ## Status checking
 
 ```python
