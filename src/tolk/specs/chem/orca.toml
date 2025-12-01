@@ -46,3 +46,14 @@ anchor = "Magnitude (Debye)"
 occurrence = "last"
 description = "total dipole moment"
 parse = { field = -1, type = "float", unit = "debye" }
+
+# Every geometry the optimiser printed, not just the last one. Each block
+# carries a step number so the cycles stay apart once flattened.
+[quantity.trajectory]
+anchor = "CARTESIAN COORDINATES (ANGSTROEM)"
+occurrence = "all"
+description = "geometry at every optimisation step"
+block = { skip = 2, until = "blank" }
+parse.columns = { symbol = 0, x = 1, y = 2, z = 3 }
+parse.types = { symbol = "str" }
+parse.unit = "angstrom"

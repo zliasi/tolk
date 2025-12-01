@@ -11,7 +11,7 @@ from typing import Any
 
 from . import _engine, cache
 from .source import Source
-from .spec import Quantity, Spec
+from .spec import BlockRule, Quantity, Spec
 from .value import Provenance, Value
 
 
@@ -73,11 +73,20 @@ def _not_found(quantity: Quantity) -> str:
 
 
 def _repeated_value(src: Source, quantity: Quantity, *, with_lines: bool) -> Value:
-    """Read every occurrence of an anchor that prints one line each."""
+    """Read every occurrence of a repeating quantity.
+
+    Two shapes end up here. A quantity printed one line per item, and a
+    quantity printed as a whole block per cycle. The second is what makes an
+    optimisation trajectory readable, since every step writes the same table
+    again.
+    """
     assert quantity.anchor is not None  # rejected at load time
     offsets = src.findall(quantity.anchor)
     if not offsets:
         return Value.missing(quantity.name, _not_found(quantity), src.path)
+
+    if quantity.block is not None and quantity.parse.is_table:
+        return _repeated_blocks(src, quantity, offsets, with_lines=with_lines)
 
     rule = quantity.parse
     where = Provenance(
@@ -145,6 +154,57 @@ def _fast_rows(
     return rows
 
 
+def _repeated_blocks(
+    src: Source, quantity: Quantity, offsets: list[int], *, with_lines: bool
+) -> Value:
+    """Collect the same block from every occurrence of its anchor.
+
+    Each block gets a step number so the occurrences stay distinguishable
+    once they are flattened into one table.
+    """
+    where = Provenance(
+        path=src.path,
+        offset=offsets[0],
+        line=src.line_number(offsets[0]) if with_lines else None,
+    )
+    rows: list[dict[str, Any]] = []
+    for step, offset in enumerate(offsets):
+        block = _block_rows(src, quantity, offset)
+        for row in block:
+            rows.append({"step": step, **row})
+    if not rows:
+        return Value.missing(quantity.name, "no occurrence held rows", src.path)
+    return Value(quantity.name, rows, quantity.parse.unit, where)
+
+
+def _block_rows(src: Source, quantity: Quantity, offset: int) -> list[dict[str, Any]]:
+    """Rows of one block, by whichever path applies."""
+    block = quantity.block
+    assert block is not None
+    span = src.block_span(
+        offset,
+        skip=block.skip,
+        until=_until(block),
+        max_lines=block.max_lines,
+    )
+    fast = _fast_rows(src, quantity, span)
+    if fast is not None:
+        return fast
+    rows = []
+    for line_from, line_to in src.lines(*span):
+        row = _row(src.read(line_from, line_to).split(), quantity)
+        if row is not None:
+            rows.append(row)
+    return rows
+
+
+def _until(block: BlockRule) -> _engine.Until:
+    if block.stops_on_blank:
+        return _engine.BLANK
+    literal = block.until_bytes
+    return literal if literal is not None else None
+
+
 def _row(fields: list[bytes], quantity: Quantity) -> dict[str, Any] | None:
     """One record from a split line, or None when the line is furniture."""
     rule = quantity.parse
@@ -197,14 +257,11 @@ def _table_value(src: Source, quantity: Quantity, where: Provenance) -> Value:
     if block is None:
         return Value.missing(quantity.name, "table quantity has no block", src.path)
 
-    until: _engine.Until = None
-    if block.stops_on_blank:
-        until = _engine.BLANK
-    elif block.until_bytes is not None:
-        until = block.until_bytes
-
     span = src.block_span(
-        where.offset, skip=block.skip, until=until, max_lines=block.max_lines
+        where.offset,
+        skip=block.skip,
+        until=_until(block),
+        max_lines=block.max_lines,
     )
 
     rows: list[dict[str, Any]] = []
