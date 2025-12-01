@@ -24,7 +24,14 @@ class OrcaSpecTest(unittest.TestCase):
         self.assertIn("orca", registry.formats())
         self.assertEqual(
             self.spec.names(),
-            ["dipole", "energy", "excitations", "geometry", "version"],
+            [
+                "dipole",
+                "energy",
+                "excitations",
+                "geometry",
+                "trajectory",
+                "version",
+            ],
         )
 
     def test_banner_is_detected_over_the_extension(self) -> None:
@@ -77,6 +84,17 @@ class OrcaSpecTest(unittest.TestCase):
             },
         )
         self.assertAlmostEqual(value.value[-1]["energy_ev"], 8.237910, places=6)
+
+    def test_trajectory_keeps_every_step_apart(self) -> None:
+        # The fixture holds one geometry block, so the trajectory is one step
+        # that agrees with the final geometry.
+        with Source(OPT) as src:
+            traj = extract(src, self.spec, "trajectory")
+            final = extract(src, self.spec, "geometry")
+        self.assertTrue(traj.ok)
+        self.assertEqual({row["step"] for row in traj.value}, {0})
+        self.assertEqual(len(traj.value), len(final.value))
+        self.assertEqual(traj.value[0]["symbol"], final.value[0]["symbol"])
 
     def test_quantity_absent_from_this_run_gives_a_reason(self) -> None:
         with Source(OPT) as src:
