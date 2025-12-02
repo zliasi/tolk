@@ -7,6 +7,7 @@ needs comes from the spec.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from . import _engine, cache
@@ -18,7 +19,28 @@ from .value import Provenance, Value
 def extract(src: Source, spec: Spec, name: str, *, with_lines: bool = False) -> Value:
     """Read one quantity out of a source."""
     quantity = spec.quantity(name)
+    hook = _PARSERS.get((spec.format, name))
+    if hook is not None:
+        return _run_hook(src, quantity, hook)
     return extract_quantity(src, quantity, with_lines=with_lines)
+
+
+def _run_hook(
+    src: Source, quantity: Quantity, hook: Callable[[Source, Quantity], Any]
+) -> Value:
+    """Run a registered parser, keeping the same failure contract."""
+    try:
+        produced = hook(src, quantity)
+    except Exception as exc:  # noqa: BLE001 - a hook must not break a sweep
+        return Value.missing(quantity.name, f"parser raised {exc}", src.path)
+    if produced is None:
+        return Value.missing(quantity.name, "parser found nothing", src.path)
+    return Value(
+        quantity.name,
+        produced,
+        quantity.parse.unit,
+        Provenance(path=src.path, offset=0),
+    )
 
 
 def extract_many(
@@ -26,6 +48,40 @@ def extract_many(
 ) -> dict[str, Value]:
     """Read several quantities out of one source."""
     return {name: extract(src, spec, name, with_lines=with_lines) for name in names}
+
+
+# Python parsers registered for quantities a spec cannot express.
+#
+# The escape hatch has to live inside the spec system rather than outside it.
+# Without it the first quantity that needs real logic makes a user abandon
+# specs entirely and go back to writing a script.
+_PARSERS: dict[tuple[str, str], Callable[[Source, Quantity], Any]] = {}
+
+
+def parser(
+    format: str, quantity: str
+) -> Callable[[Callable[[Source, Quantity], Any]], Callable[[Source, Quantity], Any]]:
+    """Register a Python parser for one quantity of one format.
+
+    The function receives the open Source and the Quantity and returns a
+    value, or None to mean the quantity is not there.
+    """
+
+    def register(
+        fn: Callable[[Source, Quantity], Any],
+    ) -> Callable[[Source, Quantity], Any]:
+        _PARSERS[(format, quantity)] = fn
+        return fn
+
+    return register
+
+
+def parsers() -> dict[tuple[str, str], Callable[[Source, Quantity], Any]]:
+    return dict(_PARSERS)
+
+
+def clear_parsers() -> None:
+    _PARSERS.clear()
 
 
 def extract_quantity(
