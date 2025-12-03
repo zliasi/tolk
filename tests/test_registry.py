@@ -32,12 +32,15 @@ class RegistryTest(unittest.TestCase):
         self.addCleanup(registry.refresh)
 
     def test_shipped_specs_are_found(self) -> None:
-        self.assertEqual(registry.formats(), ["gaussian", "orca", "xyz"])
+        self.assertEqual(
+            registry.formats(),
+            ["gaussian", "keyvalue", "orca", "table", "xyz"],
+        )
 
     def test_unknown_format_lists_what_exists(self) -> None:
         with self.assertRaises(SpecError) as caught:
             registry.get("nosuchformat")
-        self.assertIn("gaussian, orca, xyz", str(caught.exception))
+        self.assertIn("gaussian, keyvalue, orca, table, xyz", str(caught.exception))
 
     def test_spec_records_where_it_came_from(self) -> None:
         self.assertTrue(registry.get("orca").source.endswith("orca.toml"))

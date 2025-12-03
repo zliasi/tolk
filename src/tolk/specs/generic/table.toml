@@ -1,0 +1,14 @@
+format = "table"
+
+# Whitespace separated columns with a header line. Opt in with -f table.
+[signature]
+priority = -50
+
+[quantity.header]
+description = "the header line"
+parse = { whole_line = true, type = "str" }
+
+[quantity.rows]
+description = "first six numeric columns, by position"
+block = { skip = 1 }
+parse.columns = { c0 = 0, c1 = 1, c2 = 2, c3 = 3, c4 = 4, c5 = 5 }

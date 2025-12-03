@@ -152,7 +152,8 @@ class CliTest(unittest.TestCase):
     def test_spec_list(self) -> None:
         code, out, _ = run("spec", "list")
         self.assertEqual(code, 0)
-        self.assertEqual(len(out.strip().splitlines()), 3)
+        listed = [line.split()[0] for line in out.strip().splitlines()]
+        self.assertEqual(listed, ["gaussian", "keyvalue", "orca", "table", "xyz"])
 
     def test_spec_show(self) -> None:
         code, out, _ = run("spec", "show", "orca")

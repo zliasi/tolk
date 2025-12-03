@@ -1,0 +1,22 @@
+format = "keyvalue"
+
+# No banner and no reliable extension, so this is opt in with -f keyvalue
+# rather than something tolk guesses at.
+[signature]
+priority = -50
+
+# A key-value log has no fixed set of keys, so a spec cannot enumerate them.
+# What it can do is give the shape a name and let scan and the parser hook do
+# the rest. These two cover the common cases.
+
+[quantity.first_line]
+description = "the first line, whatever it is"
+parse = { whole_line = true, type = "str" }
+
+[quantity.pairs]
+description = "every whitespace separated key and value"
+occurrence = "all"
+anchor = "="
+parse.columns = { key = 0, value = 1 }
+parse.types = { key = "str", value = "str" }
+parse.strip = "=:"
