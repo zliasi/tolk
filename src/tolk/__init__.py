@@ -17,6 +17,7 @@ from .batch import Sweep, check_many, get_many, map_files
 from .source import Source, open
 from .spec import SpecError
 from .value import Provenance, Value
+from .watch import Update, follow
 
 __all__ = [
     "BLANK",
@@ -25,6 +26,7 @@ __all__ = [
     "Source",
     "Status",
     "Sweep",
+    "Update",
     "SpecError",
     "Value",
     "__version__",
@@ -33,6 +35,7 @@ __all__ = [
     "check_many",
     "describe",
     "explain",
+    "follow",
     "formats",
     "get_many",
     "map_files",
