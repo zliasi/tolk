@@ -12,7 +12,7 @@ import sys
 from collections.abc import Sequence
 
 from . import _check, _explain, _sniff, backends, batch, cache, convert, registry
-from . import template
+from . import template, watch
 from ._version import __version__
 from .record import Table
 from .source import Source
@@ -96,6 +96,16 @@ def _parser() -> argparse.ArgumentParser:
     )
     write.add_argument("--list", action="store_true", help="list templates")
     write.set_defaults(run=_run_write)
+
+    watching = subs.add_parser("watch", help="follow a running calculation")
+    watching.add_argument("file")
+    watching.add_argument("quantity")
+    watching.add_argument("-f", "--format")
+    watching.add_argument("--poll", type=float, default=watch.POLL)
+    watching.set_defaults(run=_run_watch)
+
+    comp = subs.add_parser("completion", help="print bash completion")
+    comp.set_defaults(run=_run_completion)
 
     backend = subs.add_parser("backends", help="list conversion backends")
     backend.set_defaults(run=_run_backends)
@@ -289,6 +299,50 @@ def _run_backends(args: argparse.Namespace) -> int:
         state = "installed" if entry.available() else "missing"
         print(f"{name:{width}}  {state:9s}  {entry.source}")
     print(f"native writers: {', '.join(convert.writers())}")
+    return 0
+
+
+def _run_watch(args: argparse.Namespace) -> int:
+    last = None
+    for update in watch.follow(
+        args.file, args.quantity, format=args.format, poll=args.poll
+    ):
+        last = update
+        shown = update.value.value if update.value.ok else update.value.reason
+        print(f"{update.state:8s} {update.size:>10d}  {shown}", flush=True)
+    if last is None:
+        return 1
+    return 0 if last.state == _check.OK else 1
+
+
+COMPLETION = """
+_tolk() {
+    local cur prev
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    if [ "$COMP_CWORD" -eq 1 ]; then
+        COMPREPLY=($(compgen -W "get check scan cat convert write \
+            backends sniff spec watch completion" -- "$cur"))
+        return
+    fi
+    case "$prev" in
+        -f|--format) COMPREPLY=($(compgen -W "$(tolk spec list \
+            | awk '{print $1}')" -- "$cur")) ; return ;;
+        -t|--to) COMPREPLY=($(compgen -W "csv tsv json" -- "$cur")) ; return ;;
+        show) COMPREPLY=($(compgen -W "$(tolk spec list \
+            | awk '{print $1}')" -- "$cur")) ; return ;;
+        write) COMPREPLY=($(compgen -W "$(tolk write --list)" -- "$cur"))
+            return ;;
+        spec) COMPREPLY=($(compgen -W "list show explain" -- "$cur")) ; return ;;
+    esac
+    COMPREPLY=($(compgen -f -- "$cur"))
+}
+complete -o filenames -F _tolk tolk
+"""
+
+
+def _run_completion(args: argparse.Namespace) -> int:
+    print(COMPLETION.strip())
     return 0
 
 
