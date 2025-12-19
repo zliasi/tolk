@@ -16,7 +16,7 @@ import pathlib
 import shutil
 import subprocess
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 BACKEND_PATH_ENV = "TOLK_BACKENDS"
 

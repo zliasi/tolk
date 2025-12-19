@@ -20,8 +20,10 @@ pip install ./tolk
 
 ## Status
 
-Early. Specs, extraction, status checking, the CLI, and the C engine work.
-Batch, convert, and templates do not. See CHANGELOG.md.
+Working: the byte layer, specs and extraction, status checking, sweeps with
+caching, the C engine, conversion with declared backends, templates, follow,
+and the CLI. Shipped specs cover ORCA, Gaussian, and xyz, plus two generic
+shapes. See CHANGELOG.md.
 
 ## The C engine
 
@@ -218,8 +220,10 @@ parse.types = { symbol = "str" }
 ```
 
 `occurrence` is `first`, `last`, `all`, or an index. Negative indices count
-from the end. `all` is for quantities a program prints once per item rather
-than as a table, one line per excited state.
+from the end. `all` covers two shapes: a quantity printed one line per item,
+one line per excited state, and a whole block printed once per cycle. The
+second is what makes an optimisation trajectory readable, and each block gets
+a `step` column so the cycles stay apart.
 
 `block` walks from the anchor to the data. `skip` steps over the header,
 `until` ends the run at `blank` or at a literal that begins a line.
@@ -237,7 +241,34 @@ Detection is content first, extension second. Specs with a banner should not
 claim an extension, since ORCA and Gaussian both write `.out` and only the
 banner separates them.
 
-Shipped: `orca`, `gaussian`, `xyz`.
+Shipped: `orca`, `gaussian`, `xyz`, and two generic shapes, `keyvalue` and
+`table`, which have no signature and are opt in with `-f`.
+
+When a spec genuinely cannot express a quantity, register a Python parser
+rather than abandoning specs altogether:
+
+```python
+@tolk.parser("orca", "something_awkward")
+def read_it(src, quantity):
+    offset = src.rfind(quantity.anchor)
+    return src.block_lines(offset, skip=2, until=tolk.BLANK)
+```
+
+A hook that raises is a miss with a reason, never a crash, because it runs
+inside sweeps over hundreds of files.
+
+## Following a running job
+
+```python
+for update in tolk.follow("job.out", "energy"):
+    print(update.state, update.value.value)
+```
+
+```
+tolk watch job.out energy
+```
+
+Yields only when the file has grown, and stops when the run terminates.
 
 ## Debugging a spec
 

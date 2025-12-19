@@ -1,5 +1,30 @@
 # changelog
 
+## 0.7.0 - 2025-12-19
+
+Repeating blocks, escape hatches, and following.
+
+- occurrence = "all" now also collects a whole block from every occurrence of
+  its anchor, not just single lines. Each block carries a step column, so an
+  optimisation trajectory is one quantity rather than one per cycle
+- the orca spec gained a trajectory quantity on that basis. Twenty two steps
+  of fifteen atoms out of one entry
+- Python parser hooks, registered with @tolk.parser(format, quantity), for
+  quantities a spec cannot express. The escape hatch lives inside the spec
+  system, because without one the first awkward quantity makes a user give up
+  on specs entirely. A hook that raises is a miss with a reason, never a
+  crash, since it runs inside sweeps
+- generic keyvalue and table specs. Neither has a signature, so both are opt
+  in with -f, since guessing at shapes this loose would misfire constantly
+- follow re-reads a growing file and stops when the run terminates, yielding
+  only when the size has changed
+- cli: watch, completion
+
+Not shipped, and worth saying plainly. xtb and GPAW specs were planned for
+this release. The xtb and gpaw directories in the reference database are
+empty, and a spec that cannot be checked against a real file is worse than no
+spec, so they wait for outputs.
+
 ## 0.6.0 - 2025-11-28
 
 Conversion, backends, and templates.
